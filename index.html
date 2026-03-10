@@ -441,7 +441,18 @@ let allRows = [];
 async function fetchCSV(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
+  const buffer = await res.arrayBuffer();
+  // Try UTF-8 first, fall back to Windows-1250 (common Hungarian encoding)
+  let text;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+  } catch(e) {
+    try {
+      text = new TextDecoder('windows-1250').decode(buffer);
+    } catch(e2) {
+      text = new TextDecoder('iso-8859-2').decode(buffer);
+    }
+  }
   return parseCSV(text);
 }
 
