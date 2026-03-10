@@ -529,21 +529,41 @@ async function init() {
 
 // ─── Build customer select ───────────────────────────────────────────────────
 function buildCustomerSelect(customers) {
-  // Detect columns
   const sample = customers[0] || {};
   const keys = Object.keys(sample);
-  console.log('Customer columns:', keys);
+  console.log('Customer ALL columns:', keys);
+  console.log('Customer sample row:', sample);
 
-  // Try to detect name and group columns
-  const nameKey  = keys.find(k => /nev|name|vevo/i.test(k)) || keys[1] || keys[0];
-  const idKey    = keys.find(k => /^id$|kod|code|szam/i.test(k)) || keys[0];
-  const groupKey = keys.find(k => /csoport|group|kategor|pricegroup|ar_?csoport/i.test(k)) || keys.find(k => k !== nameKey && k !== idKey) || keys[2];
+  // Score each key: prefer keys whose values look like names (long, has spaces/letters)
+  function scoreName(k) {
+    const vals = customers.slice(0,5).map(r => String(r[k]||''));
+    const avgLen = vals.reduce((s,v)=>s+v.length,0)/vals.length;
+    const hasSpace = vals.some(v => v.includes(' '));
+    const isNumeric = vals.every(v => /^\d+$/.test(v));
+    if (isNumeric) return -1;
+    return avgLen + (hasSpace ? 20 : 0);
+  }
+
+  // Name: explicit pattern first, then highest score
+  let nameKey = keys.find(k => /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k));
+  if (!nameKey) nameKey = keys.slice().sort((a,b) => scoreName(b)-scoreName(a))[0];
+
+  // ID: explicit pattern, or lowest-score key
+  let idKey = keys.find(k => /^id$|_id$|kod$|^kod|cikkszam|ugyfel.*szam|szam$/i.test(k));
+  if (!idKey) idKey = keys.find(k => k !== nameKey && /^\d+$/.test(String(sample[k]||'')));
+  if (!idKey) idKey = keys.find(k => k !== nameKey) || keys[0];
+
+  // Group: explicit pattern
+  let groupKey = keys.find(k => /csoport|group|kategor|pricegroup|ar.*csoport|arkategoria/i.test(k));
+  if (!groupKey) groupKey = keys.find(k => k !== nameKey && k !== idKey) || keys[0];
+
+  console.log('Detected customer cols:', { nameKey, idKey, groupKey });
+  console.log('Name sample values:', customers.slice(0,3).map(r=>r[nameKey]));
+  console.log('Group sample values:', customers.slice(0,3).map(r=>r[groupKey]));
 
   window._customerCols = { nameKey, idKey, groupKey };
-  console.log('Detected customer cols:', { nameKey, idKey, groupKey });
 
   const sel = document.getElementById('customerSelect');
-  // Sort by name
   const sorted = [...customers].sort((a,b) => (a[nameKey]||'').localeCompare(b[nameKey]||'', 'hu'));
   sorted.forEach(c => {
     const opt = document.createElement('option');
