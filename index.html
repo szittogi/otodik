@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Árlista</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #0d0f14;
@@ -437,32 +438,38 @@ let selectedCustomer = null;
 let expandedItems = new Set();
 let allRows = [];
 
-// ─── Fetch helpers ───────────────────────────────────────────────────────────
+// ─── Fetch helpers (XLSX via SheetJS) ────────────────────────────────────────
 async function fetchCSV(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buffer = await res.arrayBuffer();
   const bytes = new Uint8Array(buffer);
 
-  // Check BOM markers
-  if (bytes[0]===0xFF && bytes[1]===0xFE) return parseCSV(new TextDecoder('utf-16le').decode(buffer));
-  if (bytes[0]===0xFE && bytes[1]===0xFF) return parseCSV(new TextDecoder('utf-16be').decode(buffer));
+  // Detect if ZIP/XLSX (PK header) or CSV
+  const isXLSX = bytes[0] === 0x50 && bytes[1] === 0x4B;
+  console.log('File type:', isXLSX ? 'XLSX' : 'CSV/text', '| First bytes:', bytes[0], bytes[1], bytes[2], bytes[3]);
 
-  // Log first bytes for debugging
-  const firstBytes = Array.from(bytes.slice(0,20)).map(b=>'0x'+b.toString(16).padStart(2,'0')).join(' ');
-  console.log('First bytes of CSV:', firstBytes);
+  if (isXLSX) {
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    console.log('XLSX rows:', rows.length, '| Sample:', rows[0]);
+    return rows.map(r => {
+      const out = {};
+      for (const k of Object.keys(r)) out[String(k).trim()] = String(r[k]).trim();
+      return out;
+    });
+  }
 
-  // Try each encoding, pick the one where >70% of chars are readable
-  const encodings = ['utf-8','windows-1250','iso-8859-2','iso-8859-1','windows-1252'];
+  // Fallback: CSV with encoding detection
+  const encodings = ['utf-8','windows-1250','iso-8859-2'];
   for (const enc of encodings) {
     try {
-      const text = new TextDecoder(enc, {fatal: true}).decode(buffer);
-      const sample = text.slice(0, 500);
-      const okChars = (sample.match(/[a-z\u00C0-\u017E0-9 ;,\.\-_()]/gi) || []).length;
-      const ratio = okChars / Math.max(sample.length, 1);
-      console.log(`Encoding ${enc}: ratio=${ratio.toFixed(2)}, sample="${sample.slice(0,60)}"`);
-      if (ratio > 0.65) { console.log('Selected:', enc); return parseCSV(text); }
-    } catch(e) { /* skip */ }
+      const text = new TextDecoder(enc, {fatal:true}).decode(buffer);
+      const sample = text.slice(0,300);
+      const ok = (sample.match(/[a-zÀ-ž0-9 ;,.]/gi)||[]).length;
+      if (ok/sample.length > 0.6) return parseCSV(text);
+    } catch(e) {}
   }
   return parseCSV(new TextDecoder('windows-1250').decode(buffer));
 }
@@ -483,11 +490,10 @@ function parseCSV(text) {
 function splitCSVLine(line, sep) {
   const result = [];
   let cur = '', inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const c = line[i];
-    if (c === '"') { inQ = !inQ; }
+  for (const c of line) {
+    if (c === '"') inQ = !inQ;
     else if (c === sep && !inQ) { result.push(cur); cur = ''; }
-    else { cur += c; }
+    else cur += c;
   }
   result.push(cur);
   return result;
