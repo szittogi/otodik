@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vevői Árjegyzék</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #161b27;
+    --surface2: #1e2535;
+    --border: #2a3347;
+    --accent: #4f8ef7;
+    --accent2: #38d9a9;
+    --text: #e2e8f0;
+    --text-muted: #64748b;
+    --danger: #f56565;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; font-size: 14px; color: #fff;
+  }
+
+  .header h1 {
+    font-size: 18px; font-weight: 600; letter-spacing: -0.3px;
+  }
+
+  .header h1 span { color: var(--accent); }
+
+  .main { padding: 32px; max-width: 1300px; margin: 0 auto; }
+
+  .load-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 28px;
+  }
+
+  .load-section h2 {
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  .api-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .api-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+  }
+
+  .api-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .api-dot.ok { background: var(--accent2); }
+  .api-dot.err { background: var(--danger); }
+  .api-dot.loading { background: var(--accent); animation: pulse 1s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .api-label { color: var(--text-muted); flex: 1; }
+  .api-count { font-family: 'IBM Plex Mono', monospace; color: var(--accent); font-size: 12px; }
+
+  .btn-load {
+    background: linear-gradient(135deg, var(--accent), #6366f1);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-load:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-load:active { transform: translateY(0); }
+  .btn-load:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Customer search */
+  .search-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 28px;
+    display: none;
+  }
+  .search-section.visible { display: block; }
+
+  .search-label {
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .search-wrapper {
+    position: relative;
+    max-width: 480px;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--text-muted); }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 200;
+    display: none;
+  }
+  .dropdown.open { display: block; }
+
+  .dropdown-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background 0.15s;
+  }
+  .dropdown-item:last-child { border-bottom: none; }
+  .dropdown-item:hover { background: var(--surface); }
+  .dropdown-item .cust-name { font-weight: 500; }
+  .dropdown-item .cust-id {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Customer info card */
+  .customer-card {
+    margin-top: 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: none;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .customer-card.visible { display: flex; }
+
+  .cc-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 18px; color: #fff; flex-shrink: 0;
+  }
+
+  .cc-info h3 { font-size: 16px; font-weight: 600; }
+  .cc-info p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+  .cc-badge {
+    margin-left: auto;
+    background: rgba(79,142,247,0.15);
+    border: 1px solid rgba(79,142,247,0.4);
+    color: var(--accent);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Price table */
+  .price-section {
+    display: none;
+  }
+  .price-section.visible { display: block; }
+
+  .section-title {
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after {
+    content: ''; flex: 1;
+    height: 1px; background: var(--border);
+  }
+
+  .filter-bar {
+    display: flex; gap: 10px; margin-bottom: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    flex: 1;
+    min-width: 200px;
+    max-width: 320px;
+  }
+  .filter-input:focus { border-color: var(--accent); }
+  .filter-input::placeholder { color: var(--text-muted); }
+
+  .count-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  .table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 2px solid var(--border);
+  }
+
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(79,142,247,0.04); }
+
+  .td-code {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    font-size: 12px;
+  }
+
+  .td-name { font-weight: 500; }
+
+  .td-size {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .td-price {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    color: var(--accent2);
+    text-align: right;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .error-msg {
+    color: var(--danger);
+    font-size: 13px;
+    padding: 8px 0;
+    display: none;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">AR</div>
+  <h1>Vevői <span>Árjegyzék</span></h1>
+</div>
+
+<div class="main">
+
+  <!-- Data loading -->
+  <div class="load-section">
+    <h2>Adatforrások</h2>
+    <div class="api-grid">
+      <div class="api-item">
+        <div class="api-dot" id="dot-customers"></div>
+        <span class="api-label">Vevők (csoportok)</span>
+        <span class="api-count" id="cnt-customers">—</span>
+      </div>
+      <div class="api-item">
+        <div class="api-dot" id="dot-prices"></div>
+        <span class="api-label">Csoportárak</span>
+        <span class="api-count" id="cnt-prices">—</span>
+      </div>
+      <div class="api-item">
+        <div class="api-dot" id="dot-products"></div>
+        <span class="api-label">Termékek (méretek)</span>
+        <span class="api-count" id="cnt-products">—</span>
+      </div>
+    </div>
+    <button class="btn-load" id="btn-load" onclick="loadAll()">Adatok betöltése</button>
+    <div class="error-msg" id="err-msg"></div>
+  </div>
+
+  <!-- Customer search -->
+  <div class="search-section" id="search-section">
+    <div class="search-label">Vevő kiválasztása</div>
+    <div class="search-wrapper">
+      <input
+        type="text"
+        class="search-input"
+        id="search-input"
+        placeholder="Kezdje el begépelni a vevő nevét..."
+        autocomplete="off"
+        oninput="onSearch(this.value)"
+        onfocus="showDropdown()"
+      >
+      <div class="dropdown" id="dropdown"></div>
+    </div>
+    <div class="customer-card" id="customer-card">
+      <div class="cc-avatar" id="cc-avatar">?</div>
+      <div class="cc-info">
+        <h3 id="cc-name">—</h3>
+        <p id="cc-id">—</p>
+      </div>
+      <div class="cc-badge" id="cc-group">—</div>
+    </div>
+  </div>
+
+  <!-- Price table -->
+  <div class="price-section" id="price-section">
+    <div class="section-title">Árjegyzék</div>
+    <div class="filter-bar">
+      <input type="text" class="filter-input" id="filter-input" placeholder="Szűrés cikkszám vagy név alapján..." oninput="filterTable(this.value)">
+      <span class="count-badge" id="row-count"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cikkszám</th>
+            <th>Megnevezés</th>
+            <th>Méret</th>
+            <th style="text-align:right">Ár (HUF)</th>
+          </tr>
+        </thead>
+        <tbody id="price-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ---- API URLs ----
+const API_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX2Y1NEZvaTNyZG5yM0pjTTJfUF9Ca1JteWxwbnlET2NMR256WmZwZUNlaW1Uc2w1WF80S214NW5ETTlpVV9DSUU2WElVQ25nQS1Ob1oyVGJqN0ozZ2lJWlhTTTZyb05pczU1VFliejRfSEJwdnc9';
+const API_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX2c0LUZLeWVYdTMzWmRFMHlRaFI2MjVLRURBdWFQOUJ0RzlDUmRFLWl0R0Rsb1VUcldocl84d1gtcGhsU3FNVm8xR2xNMExTZ2NKSmFmWmc3U28tTjd4blJnQzlwdXdmN1Y5SFhjRGF5dk5xMjQ9';
+const API_PRODUCTS  = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX2hwaGoxLWN5ODJ5VFVlTk05bkJNMjJkVzBvTmprS2NUY2dvMlRFUFo0ZWVaOFhxZld3WWtwbXZvNEpzaXRTWnp1a204VlhNTUd6dzhvV0thZk5rNG55bHJveXlNNmpIdlFjblpXUG43UV9lMmM9';
+
+// ---- State ----
+let customers = [];   // [{id, name, group}]
+let priceMatrix = {}; // {group: {productCode: price}}
+let products = {};    // {code: {name, size}}
+let selectedCustomer = null;
+let allRows = [];     // rendered rows for current customer
+
+// ---- Load ----
+async function loadAll() {
+  const btn = document.getElementById('btn-load');
+  const errEl = document.getElementById('err-msg');
+  btn.disabled = true;
+  btn.textContent = 'Betöltés...';
+  errEl.style.display = 'none';
+
+  try {
+    setDot('customers', 'loading');
+    setDot('prices', 'loading');
+    setDot('products', 'loading');
+
+    const [rawCustomers, rawPrices, rawProducts] = await Promise.all([
+      fetchJSON(API_CUSTOMERS),
+      fetchJSON(API_PRICES),
+      fetchJSON(API_PRODUCTS),
+    ]);
+
+    parseCustomers(rawCustomers);
+    parsePrices(rawPrices);
+    parseProducts(rawProducts);
+
+    document.getElementById('search-section').classList.add('visible');
+    btn.textContent = 'Újratöltés';
+    btn.disabled = false;
+  } catch(e) {
+    errEl.textContent = 'Hiba: ' + e.message;
+    errEl.style.display = 'block';
+    btn.textContent = 'Újrapróbálkozás';
+    btn.disabled = false;
+    setDot('customers','err'); setDot('prices','err'); setDot('products','err');
+  }
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// ---- Parsers ----
+// Try to handle various API response shapes
+function parseCustomers(data) {
+  // Might be array of objects
+  const arr = Array.isArray(data) ? data : (data.results || data.data || data.items || Object.values(data));
+  customers = arr.map(c => {
+    // Find id, name, group fields flexibly
+    const id   = c.id || c.customer_id || c.code || c.vevo_id || '';
+    const name = c.name || c.nev || c.customer_name || c.vevo_nev || JSON.stringify(c);
+    const group= c.group || c.csoport || c.customer_group || c.group_id || c.ar_csoport || '';
+    return { id: String(id), name: String(name), group: String(group), raw: c };
+  }).filter(c => c.name);
+  setDot('customers','ok');
+  document.getElementById('cnt-customers').textContent = customers.length + ' db';
+}
+
+function parsePrices(data) {
+  // priceMatrix[group][productCode] = price
+  priceMatrix = {};
+  if (Array.isArray(data)) {
+    data.forEach(row => {
+      // find group, product code, price
+      const group = String(row.group || row.csoport || row.group_id || row.ar_csoport || '');
+      const code  = String(row.code || row.cikkszam || row.product_code || row.item_code || '');
+      const price = parseFloat(row.price || row.ar || row.net_price || row.egysegar || 0);
+      if (!priceMatrix[group]) priceMatrix[group] = {};
+      priceMatrix[group][code] = price;
+    });
+  } else {
+    // might be {group: [{code, price},...]}
+    Object.entries(data).forEach(([group, rows]) => {
+      priceMatrix[group] = {};
+      if (Array.isArray(rows)) {
+        rows.forEach(row => {
+          const code  = String(row.code || row.cikkszam || row.product_code || '');
+          const price = parseFloat(row.price || row.ar || row.net_price || 0);
+          priceMatrix[group][code] = price;
+        });
+      }
+    });
+  }
+  setDot('prices','ok');
+  const total = Object.values(priceMatrix).reduce((s,g)=>s+Object.keys(g).length, 0);
+  document.getElementById('cnt-prices').textContent = total + ' ár';
+}
+
+function parseProducts(data) {
+  // products[code] = {name, size}
+  products = {};
+  const arr = Array.isArray(data) ? data : (data.results || data.data || data.items || Object.values(data));
+  arr.forEach(p => {
+    const code = String(p.code || p.cikkszam || p.item_code || p.product_code || '');
+    const name = p.name || p.nev || p.megnevezes || '';
+    const size = p.size || p.meret || p.dimension || p.dims || p.kiszereles || '';
+    products[code] = { name: String(name), size: String(size) };
+  });
+  setDot('products','ok');
+  document.getElementById('cnt-products').textContent = Object.keys(products).length + ' db';
+}
+
+// ---- Customer search ----
+function onSearch(val) {
+  val = val.trim();
+  if (!val) { hideDropdown(); return; }
+  const q = val.toLowerCase();
+  const matches = customers.filter(c => c.name.toLowerCase().includes(q)).slice(0, 30);
+  renderDropdown(matches);
+}
+
+function renderDropdown(items) {
+  const dd = document.getElementById('dropdown');
+  if (!items.length) {
+    dd.innerHTML = '<div class="dropdown-item"><span class="api-label">Nincs találat</span></div>';
+  } else {
+    dd.innerHTML = items.map(c =>
+      `<div class="dropdown-item" onclick="selectCustomer('${escHtml(c.id)}')">
+        <span class="cust-name">${escHtml(c.name)}</span>
+        <span class="cust-id">${escHtml(c.id)}</span>
+      </div>`
+    ).join('');
+  }
+  dd.classList.add('open');
+}
+
+function showDropdown() {
+  const val = document.getElementById('search-input').value.trim();
+  if (val) onSearch(val);
+}
+
+function hideDropdown() {
+  document.getElementById('dropdown').classList.remove('open');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.search-wrapper')) hideDropdown();
+});
+
+function selectCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  selectedCustomer = c;
+  document.getElementById('search-input').value = c.name;
+  hideDropdown();
+
+  // Update card
+  const card = document.getElementById('customer-card');
+  document.getElementById('cc-avatar').textContent = c.name.charAt(0).toUpperCase();
+  document.getElementById('cc-name').textContent = c.name;
+  document.getElementById('cc-id').textContent = 'ID: ' + c.id;
+  document.getElementById('cc-group').textContent = 'Csoport: ' + (c.group || 'N/A');
+  card.classList.add('visible');
+
+  renderPriceTable(c);
+}
+
+// ---- Price table ----
+function renderPriceTable(c) {
+  const group = c.group;
+  const groupPrices = priceMatrix[group] || {};
+
+  // Build rows: union of all product codes in the group prices + products table
+  const codes = new Set([...Object.keys(groupPrices), ...Object.keys(products)]);
+  // Only show codes where we have a price
+  allRows = [];
+  codes.forEach(code => {
+    const price = groupPrices[code];
+    if (price === undefined || price === null) return;
+    const prod = products[code] || {};
+    allRows.push({
+      code,
+      name: prod.name || '—',
+      size: prod.size || '—',
+      price,
+    });
+  });
+
+  allRows.sort((a,b) => a.code.localeCompare(b.code));
+
+  document.getElementById('price-section').classList.add('visible');
+  document.getElementById('filter-input').value = '';
+  renderRows(allRows);
+}
+
+function filterTable(q) {
+  q = q.toLowerCase();
+  const filtered = allRows.filter(r =>
+    r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)
+  );
+  renderRows(filtered);
+}
+
+function renderRows(rows) {
+  const tbody = document.getElementById('price-tbody');
+  document.getElementById('row-count').textContent = rows.length + ' tétel';
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">Nincs megjeleníthető adat</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r =>
+    `<tr>
+      <td class="td-code">${escHtml(r.code)}</td>
+      <td class="td-name">${escHtml(r.name)}</td>
+      <td class="td-size">${escHtml(r.size)}</td>
+      <td class="td-price">${formatPrice(r.price)}</td>
+    </tr>`
+  ).join('');
+}
+
+// ---- Helpers ----
+function setDot(key, state) {
+  const el = document.getElementById('dot-' + key);
+  el.className = 'api-dot ' + state;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatPrice(n) {
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('hu-HU', {minimumFractionDigits:0, maximumFractionDigits:2}) + ' Ft';
+}
+</script>
+</body>
+</html>
