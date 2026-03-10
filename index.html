@@ -545,7 +545,7 @@ function buildCustomerSelect(customers) {
   }
 
   // Name: explicit pattern first, then highest score
-  let nameKey = keys.find(k => /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k));
+  let nameKey = keys.find(k => k === 'Név') || keys.find(k => /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k));
   if (!nameKey) nameKey = keys.slice().sort((a,b) => scoreName(b)-scoreName(a))[0];
 
   // ID: explicit pattern, or lowest-score key
