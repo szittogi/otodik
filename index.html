@@ -442,18 +442,29 @@ async function fetchCSV(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buffer = await res.arrayBuffer();
-  // Try UTF-8 first, fall back to Windows-1250 (common Hungarian encoding)
-  let text;
-  try {
-    text = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
-  } catch(e) {
+  const bytes = new Uint8Array(buffer);
+
+  // Check BOM markers
+  if (bytes[0]===0xFF && bytes[1]===0xFE) return parseCSV(new TextDecoder('utf-16le').decode(buffer));
+  if (bytes[0]===0xFE && bytes[1]===0xFF) return parseCSV(new TextDecoder('utf-16be').decode(buffer));
+
+  // Log first bytes for debugging
+  const firstBytes = Array.from(bytes.slice(0,20)).map(b=>'0x'+b.toString(16).padStart(2,'0')).join(' ');
+  console.log('First bytes of CSV:', firstBytes);
+
+  // Try each encoding, pick the one where >70% of chars are readable
+  const encodings = ['utf-8','windows-1250','iso-8859-2','iso-8859-1','windows-1252'];
+  for (const enc of encodings) {
     try {
-      text = new TextDecoder('windows-1250').decode(buffer);
-    } catch(e2) {
-      text = new TextDecoder('iso-8859-2').decode(buffer);
-    }
+      const text = new TextDecoder(enc, {fatal: true}).decode(buffer);
+      const sample = text.slice(0, 500);
+      const okChars = (sample.match(/[a-z\u00C0-\u017E0-9 ;,\.\-_()]/gi) || []).length;
+      const ratio = okChars / Math.max(sample.length, 1);
+      console.log(`Encoding ${enc}: ratio=${ratio.toFixed(2)}, sample="${sample.slice(0,60)}"`);
+      if (ratio > 0.65) { console.log('Selected:', enc); return parseCSV(text); }
+    } catch(e) { /* skip */ }
   }
-  return parseCSV(text);
+  return parseCSV(new TextDecoder('windows-1250').decode(buffer));
 }
 
 function parseCSV(text) {
