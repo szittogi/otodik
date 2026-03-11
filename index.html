@@ -3,384 +3,292 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Árlista</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <title>Vevői Árlista</title>
+
+  <!-- SheetJS CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
   <style>
+    /* ───────── CSS VÁLTOZÓK ───────── */
     :root {
-      --bg: #0d0f14;
-      --surface: #161922;
-      --surface2: #1e2330;
-      --border: #2a3045;
-      --accent: #e8c44a;
-      --accent2: #4ae8b0;
-      --text: #e8ecf4;
-      --text-muted: #7a8099;
-      --danger: #e84a6a;
-      --radius: 10px;
+      --bg:        #0d0f14;
+      --surface:   #161921;
+      --card:      #1e2230;
+      --border:    #2a2f40;
+      --accent:    #e8c46a;
+      --accent2:   #5b8dee;
+      --text:      #e8ecf4;
+      --muted:     #7a82a0;
+      --upsell-bg: #12151e;
+      --radius:    10px;
+      --tr-hover:  #242840;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Syne', sans-serif;
+      font-family: 'DM Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      padding: 0 0 60px;
     }
 
+    /* ───────── HEADER ───────── */
     header {
+      background: linear-gradient(135deg, #161921 0%, #0d1020 100%);
       border-bottom: 1px solid var(--border);
-      padding: 20px 40px;
+      padding: 28px 40px 24px;
       display: flex;
-      align-items: center;
-      gap: 16px;
-      background: var(--surface);
+      align-items: flex-end;
+      gap: 18px;
     }
-
-    header .logo {
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.5px;
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 2rem;
       color: var(--accent);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    header p {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 2px;
     }
 
-    header .subtitle {
-      font-size: 13px;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
+    /* ───────── MAIN CONTAINER ───────── */
     .container {
-      max-width: 1200px;
+      max-width: 1300px;
       margin: 0 auto;
-      padding: 32px 24px;
+      padding: 36px 24px 0;
     }
 
-    /* Customer selector */
+    /* ───────── VEVŐ VÁLASZTÓ KÁRTYA ───────── */
     .selector-card {
-      background: var(--surface);
+      background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
       padding: 28px 32px;
       margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
     }
-
     .selector-card label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-
-    .select-wrap {
-      position: relative;
-    }
-
-    .select-wrap::after {
-      content: '▾';
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--accent);
-      pointer-events: none;
-    }
-
-    select {
-      width: 100%;
-      max-width: 480px;
-      padding: 13px 44px 13px 16px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      font-size: 15px;
+      font-size: 0.85rem;
       font-weight: 600;
-      cursor: pointer;
-      appearance: none;
-      transition: border-color 0.2s;
-    }
-
-    select:focus { outline: none; border-color: var(--accent); }
-
-    .customer-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 14px;
-      padding: 6px 14px;
-      background: color-mix(in srgb, var(--accent) 12%, transparent);
-      border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-      border-radius: 40px;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 1px;
-    }
-
-    /* Loading */
-    .loading {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      padding: 60px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Error */
-    .error-box {
-      background: color-mix(in srgb, var(--danger) 10%, transparent);
-      border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
-      border-radius: var(--radius);
-      padding: 16px 20px;
-      color: var(--danger);
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-
-    /* Price table */
-    .table-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-
-    .table-title {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.3px;
-    }
-
-    .item-count {
-      font-size: 12px;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
-    .search-wrap {
-      position: relative;
-    }
-
-    .search-wrap input {
-      padding: 9px 14px 9px 36px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      font-size: 13px;
-      width: 240px;
-      transition: border-color 0.2s;
-    }
-
-    .search-wrap input:focus { outline: none; border-color: var(--accent); }
-
-    .search-wrap::before {
-      content: '⌕';
-      position: absolute;
-      left: 11px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 16px;
-    }
-
-    .price-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    .price-table thead tr {
-      border-bottom: 2px solid var(--border);
-    }
-
-    .price-table th {
-      padding: 10px 14px;
-      text-align: left;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
+      color: var(--muted);
       text-transform: uppercase;
-      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+    .selector-card select {
+      flex: 1;
+      min-width: 260px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 11px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.97rem;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a82a0' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .selector-card select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .badge-group {
+      background: #1a1d2e;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.78rem;
+      color: var(--accent2);
+      letter-spacing: 0.04em;
       white-space: nowrap;
     }
 
-    .price-table th:last-child,
-    .price-table td:last-child {
-      text-align: right;
+    /* ───────── LOADING / ÁLLAPOT ───────── */
+    .state-box {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .state-box .spinner {
+      width: 38px; height: 38px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 18px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state-box p { font-size: 0.92rem; }
+
+    /* ───────── TÁBLÁZAT ───────── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
     }
 
-    .price-table tbody tr.main-row {
+    .info-bar {
+      padding: 14px 22px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .info-bar strong { color: var(--text); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    thead tr {
+      background: #12151e;
+      border-bottom: 2px solid var(--border);
+    }
+    thead th {
+      padding: 13px 18px;
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      white-space: nowrap;
+    }
+    tbody tr.main-row {
       border-bottom: 1px solid var(--border);
       transition: background 0.15s;
-      cursor: pointer;
+      cursor: default;
     }
+    tbody tr.main-row:hover { background: var(--tr-hover); }
 
-    .price-table tbody tr.main-row:hover {
-      background: var(--surface2);
-    }
-
-    .price-table tbody tr.main-row.expanded {
-      background: color-mix(in srgb, var(--accent) 5%, transparent);
-      border-bottom-color: transparent;
-    }
-
-    .price-table td {
-      padding: 12px 14px;
+    tbody td {
+      padding: 13px 18px;
       vertical-align: middle;
     }
 
-    .item-code {
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: var(--text-muted);
+    .sku-cell {
+      font-family: 'DM Sans', monospace;
+      font-size: 0.8rem;
+      color: var(--accent2);
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .name-cell {
+      max-width: 280px;
+      line-height: 1.45;
+    }
+    .size-cell {
+      font-size: 0.78rem;
+      color: var(--muted);
+      max-width: 200px;
+    }
+    .price-cell {
+      white-space: nowrap;
+      font-weight: 500;
+      text-align: right;
+    }
+    .price-net  { color: #a8d4a8; }
+    .price-brut { color: var(--text); }
+
+    /* ───────── UPSELL CHIP-EK ───────── */
+    .upsell-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chip {
+      background: #1c2035;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 3px 9px;
+      font-size: 0.74rem;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      font-family: monospace;
+    }
+    .chip:hover {
+      background: #252b42;
+      border-color: var(--accent);
+    }
+    .chip.active {
+      background: #2a2412;
+      border-color: var(--accent);
+      color: #f5d98a;
     }
 
-    .item-name {
+    /* ───────── UPSELL SOROK ───────── */
+    tr.upsell-row {
+      background: var(--upsell-bg);
+      border-bottom: 1px solid #1c1f2c;
+    }
+    tr.upsell-row td {
+      padding: 0;
+    }
+    .upsell-inner {
+      padding: 0 18px 14px 36px;
+    }
+    .upsell-title {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 10px 0 8px;
       font-weight: 600;
-      color: var(--text);
       display: flex;
       align-items: center;
       gap: 8px;
     }
-
-    .expand-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      font-size: 10px;
-      color: var(--text-muted);
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-
-    .expanded .expand-icon {
-      background: color-mix(in srgb, var(--accent) 15%, transparent);
-      border-color: var(--accent);
-      color: var(--accent);
-      transform: rotate(180deg);
-    }
-
-    .no-upsell .expand-icon {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .size-badge {
+    .upsell-title::before {
+      content: '';
       display: inline-block;
-      padding: 2px 8px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: 'DM Mono', monospace;
-      font-size: 11px;
-      color: var(--text-muted);
+      width: 22px;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.5;
     }
-
-    .price-val {
-      font-family: 'DM Mono', monospace;
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--accent);
+    .upsell-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
     }
-
-    /* Upsell rows */
-    .upsell-container {
-      display: none;
+    .upsell-table tr {
+      border-bottom: 1px solid #1e2230;
     }
-
-    .upsell-container.open {
-      display: table-row-group;
+    .upsell-table tr:last-child { border-bottom: none; }
+    .upsell-table td {
+      padding: 8px 14px 8px 0;
+      vertical-align: middle;
     }
+    .upsell-table .sku-cell { color: #8aafdd; }
 
-    .upsell-row {
-      background: color-mix(in srgb, var(--accent2) 4%, transparent);
-      border-bottom: 1px solid color-mix(in srgb, var(--accent2) 15%, transparent);
-    }
-
-    .upsell-row td {
-      padding: 9px 14px;
-    }
-
-    .upsell-header-row td {
-      padding: 6px 14px 4px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--accent2);
-      background: color-mix(in srgb, var(--accent2) 6%, transparent);
-    }
-
-    .upsell-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--accent2);
-      text-transform: uppercase;
-    }
-
-    .upsell-label::before {
-      content: '↳';
-      font-size: 12px;
-    }
-
-    .upsell-price {
-      font-family: 'DM Mono', monospace;
-      font-size: 13px;
-      color: var(--accent2);
-    }
-
-    .upsell-end-row td {
-      padding: 4px;
-      background: transparent;
-      border-bottom: 2px solid var(--border);
-    }
-
-    /* Empty state */
-    .empty {
-      text-align: center;
-      padding: 48px;
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-
-    @media (max-width: 700px) {
-      header { padding: 16px 20px; }
-      .container { padding: 20px 16px; }
+    /* ───────── RESZPONZÍV ───────── */
+    @media (max-width: 640px) {
+      header { padding: 20px 18px 18px; }
+      header h1 { font-size: 1.4rem; }
+      .container { padding: 20px 12px 0; }
       .selector-card { padding: 20px 16px; }
-      select { max-width: 100%; }
-      .table-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-      .search-wrap input { width: 100%; }
-      .price-table { font-size: 12px; }
-      .price-table th, .price-table td { padding: 9px 8px; }
+      thead th, tbody td { padding: 10px 10px; }
     }
   </style>
 </head>
@@ -388,420 +296,336 @@
 
 <header>
   <div>
-    <div class="logo">ÁRLISTA</div>
-    <div class="subtitle">Vevőspecifikus árjegyzék</div>
+    <p>Vevői</p>
+    <h1>Árlista</h1>
   </div>
 </header>
 
 <div class="container">
+
+  <!-- Vevő kiválasztó -->
   <div class="selector-card">
-    <label>Vevő kiválasztása</label>
-    <div id="loadingCustomers" class="loading"><div class="spinner"></div> Vevők betöltése…</div>
-    <div id="selectorArea" style="display:none">
-      <div class="select-wrap">
-        <select id="customerSelect">
-          <option value="">— Válasszon vevőt —</option>
-        </select>
-      </div>
-      <div id="customerBadge" style="display:none"></div>
-    </div>
-    <div id="customerError" class="error-box" style="display:none"></div>
+    <label for="customerSelect">Vevő kiválasztása</label>
+    <select id="customerSelect">
+      <option value="">— Adatok betöltése... —</option>
+    </select>
+    <span class="badge-group" id="groupBadge" style="display:none"></span>
   </div>
 
-  <div id="priceArea" style="display:none">
-    <div class="table-header">
-      <div>
-        <div class="table-title">Termékek és árak</div>
-        <div class="item-count" id="itemCount"></div>
-      </div>
-      <div class="search-wrap">
-        <input type="text" id="searchInput" placeholder="Keresés…" />
-      </div>
+  <!-- Tartalom -->
+  <div id="content">
+    <div class="state-box">
+      <div class="spinner"></div>
+      <p>Adatforrások betöltése…</p>
     </div>
-    <div id="loadingPrices" class="loading" style="display:none"><div class="spinner"></div> Árak betöltése…</div>
-    <div id="priceError" class="error-box" style="display:none"></div>
-    <div id="tableWrap"></div>
   </div>
+
 </div>
 
 <script>
-// ─── API endpoints ──────────────────────────────────────────────────────────
-const URL_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBKRkhJMUtwRkR3UXFUdTFPS1ZXd1Utd1Vrd09DYVl6Q1dKMVBmdkt1LW1tT1FWWEZ1VW9FYUNDdklqbTdOc1VvX0tGd29Lc05aRTNzMWg0XzdoSUNSUHJPRzBLRWxTS2hGajhlZzRYZ25IUFk9';
-const URL_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBtQTVXd0UxOV9QSHBoMm9EUkJpakVZZXpacFp0MVBNVnBicTZFZFQ2RXFGMDY3VkFPRnFna1BnMTdIMkNJd3lyTW5VVzlEZDZ6ZjFrY0NZdkNXa0pGcEZhRWY5b19Rc2pQcUFVTVF0STJ2MzQ9';
-const URL_SIZES     = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzFVTkF6NUVJdG9kd2dSb2Q2OXJYX2VqQmYxLVVaOGs0RW9IVVlpemE0VXE3d2J6Rld6TFBaX1ZvQzlQdllEa3BCb1BkLTl5VjBVN0I0SDhtRGhvU3djNXZRalF5dVlVdXdIWndrZkhkT0l1VkU9';
+// ═══════════════════════════════════════════════════════════════
+//  ADATFORRÁS URL-EK
+// ═══════════════════════════════════════════════════════════════
+const URL_CUSTOMERS  = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzUy1oUFRzU19VVU5vSGxkUGZrS3VOandRYWE5UU9iQm9JZUEtcFRxTF8yMHpzQmcweGJ3VjRKX0piVGc3Nmk0QWNTUXlVclA2eGFvY3phZ0REQjZXYkMyYkVWeVBlczlxRHJEREx0Ni1BV21tdEE9';
+const URL_PRICELIST  = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVEF5SjZpdXZpaE01MEtiMDlGN001cFdkUU9IZkNkSkF5MXk3Z182MjdmbEVxRmxYdG9sRDdjNzMzdzZhSkItaEl6ZUFJMEdnZjNlNDc0d0piUjRwREwzbGktRlR4VGYxSUE2N3FDaW55RjJEY1U9';
+const URL_PRODUCTS   = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVEMtTThCbWlNZW1JaDMxNzE2WHQwTEFCUElNUVJJZEtXU181cVpQd0g2YkdDYngxazBuelBVWFFOb0VuSWpSLWo5T0w3ZGpyQVc2NFU3WERNXzVEeXpmc1BIOVB2anBwVF9CMXRTSk9QVUR0VVk9';
 
-// ─── State ───────────────────────────────────────────────────────────────────
-let customersData = [];
-let pricesData    = [];
-let sizesData     = [];
-let selectedCustomer = null;
-let expandedItems = new Set();
-let allRows = [];
+// Globális adattárak
+let customers  = [];   // [{name, group}]
+let priceRows  = [];   // [{sku, pricelist, name, netPrice, grossPrice}]
+let productMap = {};   // sku (kisbetű) → {name, size, upsell}
 
-// ─── Fetch helpers (XLSX via SheetJS) ────────────────────────────────────────
-async function fetchCSV(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const buffer = await res.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
+// Nyitott upsell sorok nyilvántartása: mainRowId → Set(sku)
+const openUpsells = {};
 
-  // Detect if ZIP/XLSX (PK header) or CSV
-  const isXLSX = bytes[0] === 0x50 && bytes[1] === 0x4B;
-  console.log('File type:', isXLSX ? 'XLSX' : 'CSV/text', '| First bytes:', bytes[0], bytes[1], bytes[2], bytes[3]);
+// ═══════════════════════════════════════════════════════════════
+//  XLSX LETÖLTÉS ÉS FELDOLGOZÁS
+// ═══════════════════════════════════════════════════════════════
 
-  if (isXLSX) {
-    const wb = XLSX.read(buffer, { type: 'array' });
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-    console.log('XLSX rows:', rows.length, '| Sample:', rows[0]);
-    return rows.map(r => {
-      const out = {};
-      for (const k of Object.keys(r)) out[String(k).trim()] = String(r[k]).trim();
-      return out;
-    });
-  }
-
-  // Fallback: CSV with encoding detection
-  const encodings = ['utf-8','windows-1250','iso-8859-2'];
-  for (const enc of encodings) {
-    try {
-      const text = new TextDecoder(enc, {fatal:true}).decode(buffer);
-      const sample = text.slice(0,300);
-      const ok = (sample.match(/[a-zÀ-ž0-9 ;,.]/gi)||[]).length;
-      if (ok/sample.length > 0.6) return parseCSV(text);
-    } catch(e) {}
-  }
-  return parseCSV(new TextDecoder('windows-1250').decode(buffer));
+/**
+ * Letölti és XLS(X) fájllá alakítja, visszaadja a munkalapot JSON-ként.
+ */
+async function fetchXlsx(url) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
+  const buf  = await resp.arrayBuffer();
+  const wb   = XLSX.read(buf, { type: 'array' });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { defval: '' });
 }
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return [];
-  const sep = lines[0].includes(';') ? ';' : ',';
-  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g, ''));
-  return lines.slice(1).map(line => {
-    const vals = splitCSVLine(line, sep);
-    const obj = {};
-    headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim().replace(/^"|"$/g, ''); });
-    return obj;
+// ───────── VEVŐK betöltése ─────────
+function loadCustomers(rows) {
+  customers = rows.map(r => ({
+    name:  String(r['Név'] || '').trim(),
+    group: String(r['Csoportok'] || '').trim()
+  })).filter(c => c.name);
+}
+
+// ───────── ÁRLISTA betöltése ─────────
+function loadPricelist(rows) {
+  priceRows = rows.map(r => ({
+    sku:        String(r['cikkszám'] || '').trim().toLowerCase(),
+    pricelist:  String(r['Árlista']  || '').trim(),
+    name:       String(r['Név']      || '').trim(),
+    netPrice:   parsePrice(r['Nettó ár']),
+    grossPrice: parsePrice(r['Bruttó ár'])
+  })).filter(r => r.sku);
+}
+
+// ───────── TERMÉKADATOK betöltése ─────────
+function loadProducts(rows) {
+  productMap = {};
+  rows.forEach(r => {
+    const sku = String(r['Cikkszám (sku)'] || '').trim().toLowerCase();
+    if (!sku) return;
+    productMap[sku] = {
+      name:   String(r['Név']              || '').trim(),
+      size:   String(r['Méretértékek']     || '').trim(),
+      upsell: String(r['upsell termékek']  || '').trim()
+    };
   });
 }
 
-function splitCSVLine(line, sep) {
-  const result = [];
-  let cur = '', inQ = false;
-  for (const c of line) {
-    if (c === '"') inQ = !inQ;
-    else if (c === sep && !inQ) { result.push(cur); cur = ''; }
-    else cur += c;
-  }
-  result.push(cur);
-  return result;
+// ─── Ár stringből szám ───
+function parsePrice(val) {
+  if (val === '' || val === null || val === undefined) return null;
+  // Kezel "1 230,5" és "1230.5" formátumokat is
+  const s = String(val).replace(/\s/g, '').replace(',', '.');
+  const n = parseFloat(s);
+  return isNaN(n) ? null : Math.round(n);
 }
 
-// ─── Init ────────────────────────────────────────────────────────────────────
+// ─── Ft formázás ───
+function formatFt(n) {
+  if (n === null || n === undefined) return '—';
+  return n.toLocaleString('hu-HU') + ' Ft';
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INIT: MINDEN ADAT BETÖLTÉSE
+// ═══════════════════════════════════════════════════════════════
 async function init() {
   try {
-    const [customers, prices, sizes] = await Promise.all([
-      fetchCSV(URL_CUSTOMERS),
-      fetchCSV(URL_PRICES),
-      fetchCSV(URL_SIZES)
+    const [custRows, priceListRows, prodRows] = await Promise.all([
+      fetchXlsx(URL_CUSTOMERS),
+      fetchXlsx(URL_PRICELIST),
+      fetchXlsx(URL_PRODUCTS)
     ]);
-    customersData = customers;
-    pricesData    = prices;
-    sizesData     = sizes;
 
-    console.log('Customers sample:', customers[0]);
-    console.log('Prices sample:', prices[0]);
-    console.log('Sizes sample:', sizes[0]);
+    loadCustomers(custRows);
+    loadPricelist(priceListRows);
+    loadProducts(prodRows);
 
-    buildCustomerSelect(customers);
-    document.getElementById('loadingCustomers').style.display = 'none';
-    document.getElementById('selectorArea').style.display = 'block';
-  } catch(e) {
-    document.getElementById('loadingCustomers').style.display = 'none';
-    const err = document.getElementById('customerError');
-    err.style.display = 'block';
-    err.textContent = 'Hiba az adatok betöltésekor: ' + e.message;
-    console.error(e);
+    populateSelect();
+    renderContent('');  // üres állapot
+
+  } catch (err) {
+    document.getElementById('content').innerHTML = `
+      <div class="state-box">
+        <p style="color:#e87a7a">⚠ Hiba a betöltés során:<br><code>${err.message}</code></p>
+      </div>`;
+    console.error(err);
   }
 }
 
-// ─── Build customer select ───────────────────────────────────────────────────
-function buildCustomerSelect(customers) {
-  const sample = customers[0] || {};
-  const keys = Object.keys(sample);
-  console.log('Customer ALL columns:', keys);
-  console.log('Customer sample row:', sample);
-
-  // Score each key: prefer keys whose values look like names (long, has spaces/letters)
-  function scoreName(k) {
-    const vals = customers.slice(0,5).map(r => String(r[k]||''));
-    const avgLen = vals.reduce((s,v)=>s+v.length,0)/vals.length;
-    const hasSpace = vals.some(v => v.includes(' '));
-    const isNumeric = vals.every(v => /^\d+$/.test(v));
-    if (isNumeric) return -1;
-    return avgLen + (hasSpace ? 20 : 0);
-  }
-
-  // Name: explicit pattern first, then highest score
-  let nameKey = keys.find(k => k === 'Név') || keys.find(k => /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k));
-  if (!nameKey) nameKey = keys.slice().sort((a,b) => scoreName(b)-scoreName(a))[0];
-
-  // ID: explicit pattern, or lowest-score key
-  let idKey = keys.find(k => /^id$|_id$|kod$|^kod|cikkszam|ugyfel.*szam|szam$/i.test(k));
-  if (!idKey) idKey = keys.find(k => k !== nameKey && /^\d+$/.test(String(sample[k]||'')));
-  if (!idKey) idKey = keys.find(k => k !== nameKey) || keys[0];
-
-  // Group: explicit pattern
-  let groupKey = keys.find(k => /csoport|group|kategor|pricegroup|ar.*csoport|arkategoria/i.test(k));
-  if (!groupKey) groupKey = keys.find(k => k !== nameKey && k !== idKey) || keys[0];
-
-  console.log('Detected customer cols:', { nameKey, idKey, groupKey });
-  console.log('Name sample values:', customers.slice(0,3).map(r=>r[nameKey]));
-  console.log('Group sample values:', customers.slice(0,3).map(r=>r[groupKey]));
-
-  window._customerCols = { nameKey, idKey, groupKey };
-
+// ═══════════════════════════════════════════════════════════════
+//  LEGÖRDÜLŐ MENÜ FELTÖLTÉSE
+// ═══════════════════════════════════════════════════════════════
+function populateSelect() {
   const sel = document.getElementById('customerSelect');
-  const sorted = [...customers].sort((a,b) => (a[nameKey]||'').localeCompare(b[nameKey]||'', 'hu'));
-  sorted.forEach(c => {
+  sel.innerHTML = '<option value="">— Válassz vevőt —</option>';
+  customers.forEach((c, i) => {
     const opt = document.createElement('option');
-    opt.value = c[idKey] || c[nameKey];
-    opt.textContent = c[nameKey] || c[idKey];
-    opt.dataset.group = c[groupKey] || '';
-    opt.dataset.name  = c[nameKey] || '';
+    opt.value = i;
+    opt.textContent = c.name;
     sel.appendChild(opt);
   });
-
   sel.addEventListener('change', onCustomerChange);
 }
 
-// ─── Customer selected ───────────────────────────────────────────────────────
-function onCustomerChange() {
-  const sel = document.getElementById('customerSelect');
-  const opt = sel.options[sel.selectedIndex];
-  if (!opt || !opt.value) {
-    document.getElementById('customerBadge').style.display = 'none';
-    document.getElementById('priceArea').style.display = 'none';
+function onCustomerChange(e) {
+  const idx = e.target.value;
+  if (idx === '') {
+    document.getElementById('groupBadge').style.display = 'none';
+    renderContent('');
+    return;
+  }
+  const customer = customers[parseInt(idx)];
+  // Ha üres a csoport → alapértelmezett
+  const group = customer.group || 'arsor11_webshop';
+
+  const badge = document.getElementById('groupBadge');
+  badge.textContent = group;
+  badge.style.display = '';
+
+  renderContent(group);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ÁRLISTA MEGJELENÍTÉSE
+// ═══════════════════════════════════════════════════════════════
+function renderContent(group) {
+  const content = document.getElementById('content');
+
+  if (!group) {
+    content.innerHTML = `<div class="state-box"><p>Válassz vevőt a legördülő menüből.</p></div>`;
     return;
   }
 
-  const group = opt.dataset.group;
-  const name  = opt.dataset.name;
+  // Szűrés: csak a kiválasztott csoporthoz tartozó sorok
+  const filtered = priceRows.filter(r => r.pricelist === group);
 
-  selectedCustomer = { value: opt.value, name, group };
-
-  const badge = document.getElementById('customerBadge');
-  badge.style.display = 'inline-flex';
-  badge.innerHTML = `<span>Árcsoport:</span> <strong>${group || '—'}</strong>`;
-  badge.className = 'customer-badge';
-
-  expandedItems.clear();
-  renderPriceTable(group);
-}
-
-// ─── Render price table ───────────────────────────────────────────────────────
-function renderPriceTable(group) {
-  document.getElementById('priceArea').style.display = 'block';
-  document.getElementById('priceError').style.display = 'none';
-  document.getElementById('tableWrap').innerHTML = '';
-
-  // Detect price columns
-  const pSample = pricesData[0] || {};
-  const pKeys   = Object.keys(pSample);
-  console.log('Price columns:', pKeys);
-
-  // Item code / name
-  const codeKey  = pKeys.find(k => /cikkszam|cikk_szam|kod|code|item_?code|sku|szam/i.test(k)) || pKeys[0];
-  const nameKey  = pKeys.find(k => /nev|name|megnevezes|leiras/i.test(k)) || pKeys[1] || pKeys[0];
-
-  // Price column matching group
-  let priceKey = pKeys.find(k => k === group);
-  if (!priceKey) priceKey = pKeys.find(k => k.toLowerCase() === (group||'').toLowerCase());
-  if (!priceKey) priceKey = pKeys.find(k => new RegExp(group, 'i').test(k));
-  if (!priceKey) {
-    // fallback: pick first numeric-looking column that isn't code/name
-    priceKey = pKeys.find(k => k !== codeKey && k !== nameKey && /ar|price|^[A-Z]\d*$|csoport/i.test(k));
-  }
-  if (!priceKey) priceKey = pKeys[pKeys.length - 1];
-
-  console.log('Using price key:', priceKey, 'for group:', group);
-
-  // Detect size columns
-  const sSample = sizesData[0] || {};
-  const sKeys   = Object.keys(sSample);
-  console.log('Size columns:', sKeys);
-
-  const sCodeKey  = sKeys.find(k => /cikkszam|cikk_szam|kod|code|item_?code|sku|szam/i.test(k)) || sKeys[0];
-  const sMeasKey  = sKeys.find(k => /meret|size|dimenz|mm|cm|hossz|szeles|magass/i.test(k)) || sKeys[1] || sKeys[0];
-  const sUpsellKey = sKeys.find(k => /upsell|kapcsol|ajanlott|cross/i.test(k));
-
-  console.log('Size code key:', sCodeKey, 'measure key:', sMeasKey, 'upsell key:', sUpsellKey);
-
-  // Build size map and upsell map
-  const sizeMap   = {};
-  const upsellMap = {};
-  sizesData.forEach(s => {
-    const code = s[sCodeKey];
-    if (!code) return;
-    sizeMap[code] = s[sMeasKey] || '';
-    if (sUpsellKey) upsellMap[code] = s[sUpsellKey] || '';
-  });
-
-  // Build price map
-  const priceMap = {};
-  pricesData.forEach(p => {
-    const code = p[codeKey];
-    if (!code) return;
-    priceMap[code] = { name: p[nameKey], price: p[priceKey], raw: p };
-  });
-
-  // Main list from prices
-  allRows = pricesData
-    .filter(p => p[codeKey])
-    .map(p => {
-      const code = p[codeKey];
-      return {
-        code,
-        name: p[nameKey] || '',
-        price: p[priceKey] || '',
-        size: sizeMap[code] || '',
-        upsellCodes: (upsellMap[code] || '').split(/[,;|]/).map(s=>s.trim()).filter(Boolean)
-      };
-    });
-
-  document.getElementById('itemCount').textContent = allRows.length + ' termék';
-  document.getElementById('searchInput').value = '';
-  document.getElementById('searchInput').oninput = () => renderRows(group, priceMap, sizeMap, codeKey, nameKey, priceKey);
-
-  window._tableState = { group, priceMap, sizeMap, codeKey, nameKey, priceKey };
-  renderRows(group, priceMap, sizeMap, codeKey, nameKey, priceKey);
-}
-
-function renderRows(group, priceMap, sizeMap, codeKey, nameKey, priceKey) {
-  const query = (document.getElementById('searchInput').value || '').toLowerCase();
-  const filtered = allRows.filter(r =>
-    !query ||
-    r.code.toLowerCase().includes(query) ||
-    r.name.toLowerCase().includes(query)
-  );
-
-  document.getElementById('itemCount').textContent = filtered.length + ' termék';
-
-  if (!filtered.length) {
-    document.getElementById('tableWrap').innerHTML = '<div class="empty">Nincs találat</div>';
+  if (filtered.length === 0) {
+    content.innerHTML = `<div class="state-box"><p>Ehhez a csoporthoz (<strong>${group}</strong>) nem található árlista adat.</p></div>`;
     return;
   }
 
-  const table = document.createElement('table');
-  table.className = 'price-table';
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Cikkszám</th>
-        <th>Megnevezés</th>
-        <th>Méret</th>
-        <th>Ár</th>
+  // Táblázat felépítése
+  let rows = '';
+  filtered.forEach((item, idx) => {
+    const prod   = productMap[item.sku] || { name: '', size: '', upsell: '' };
+    const name   = item.name || prod.name || '—';
+    const size   = prod.size;
+    const upsellSkus = parseUpsellSkus(prod.upsell);
+
+    // Upsell chipek
+    let chipsHtml = '';
+    if (upsellSkus.length > 0) {
+      chipsHtml = `<div class="upsell-chips">` +
+        upsellSkus.map(s =>
+          `<span class="chip" data-row="${idx}" data-sku="${s}" onclick="toggleUpsell(this, '${group}')">${s}</span>`
+        ).join('') +
+        `</div>`;
+    }
+
+    rows += `
+      <tr class="main-row" id="main-${idx}">
+        <td class="sku-cell">${escHtml(item.sku.toUpperCase())}</td>
+        <td class="name-cell">${escHtml(name)}</td>
+        <td class="size-cell">${escHtml(size)}</td>
+        <td class="price-cell price-net">${formatFt(item.netPrice)}</td>
+        <td class="price-cell price-brut">${formatFt(item.grossPrice)}</td>
+        <td>${chipsHtml}</td>
       </tr>
-    </thead>
-  `;
-
-  const tbody = document.createElement('tbody');
-
-  filtered.forEach((row, idx) => {
-    const hasUpsell = row.upsellCodes.length > 0;
-    const isExpanded = expandedItems.has(row.code);
-
-    // Main row
-    const tr = document.createElement('tr');
-    tr.className = 'main-row' + (isExpanded ? ' expanded' : '') + (!hasUpsell ? ' no-upsell' : '');
-    tr.dataset.code = row.code;
-    tr.innerHTML = `
-      <td><span class="item-code">${esc(row.code)}</span></td>
-      <td>
-        <div class="item-name">
-          <span class="expand-icon">▾</span>
-          ${esc(row.name)}
-        </div>
-      </td>
-      <td>${row.size ? `<span class="size-badge">${esc(row.size)}</span>` : '—'}</td>
-      <td><span class="price-val">${formatPrice(row.price)}</span></td>
-    `;
-    if (hasUpsell) {
-      tr.addEventListener('click', () => toggleUpsell(row.code));
-    }
-    tbody.appendChild(tr);
-
-    // Upsell section
-    if (hasUpsell) {
-      const upsellGroup = document.createElement('tbody');
-      upsellGroup.className = 'upsell-container' + (isExpanded ? ' open' : '');
-      upsellGroup.id = 'upsell-' + row.code.replace(/[^a-zA-Z0-9]/g, '_');
-
-      // Header row
-      const htr = document.createElement('tr');
-      htr.className = 'upsell-header-row';
-      htr.innerHTML = `<td colspan="4">↳ Kapcsolódó termékek (Upsell)</td>`;
-      upsellGroup.appendChild(htr);
-
-      row.upsellCodes.forEach(uCode => {
-        const uInfo = priceMap[uCode];
-        const uSize = sizeMap[uCode] || '';
-        const uName = uInfo ? uInfo.name : uCode;
-        const uPrice = uInfo ? uInfo.price : '—';
-
-        const utr = document.createElement('tr');
-        utr.className = 'upsell-row';
-        utr.innerHTML = `
-          <td><span class="item-code">${esc(uCode)}</span></td>
-          <td><span class="upsell-label">${esc(uName)}</span></td>
-          <td>${uSize ? `<span class="size-badge">${esc(uSize)}</span>` : '—'}</td>
-          <td><span class="upsell-price">${formatPrice(uPrice)}</span></td>
-        `;
-        upsellGroup.appendChild(utr);
-      });
-
-      const etr = document.createElement('tr');
-      etr.className = 'upsell-end-row';
-      etr.innerHTML = '<td colspan="4"></td>';
-      upsellGroup.appendChild(etr);
-
-      tbody.appendChild(upsellGroup);
-    }
+      <tr class="upsell-row" id="upsell-row-${idx}" style="display:none">
+        <td colspan="6">
+          <div class="upsell-inner" id="upsell-inner-${idx}"></div>
+        </td>
+      </tr>`;
   });
 
-  table.appendChild(tbody);
-  document.getElementById('tableWrap').innerHTML = '';
-  document.getElementById('tableWrap').appendChild(table);
+  content.innerHTML = `
+    <div class="table-wrap">
+      <div class="info-bar">
+        <strong>${filtered.length}</strong> termék az árlistában &nbsp;·&nbsp; Csoport: <strong>${escHtml(group)}</strong>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cikkszám</th>
+            <th>Termék neve</th>
+            <th>Méret</th>
+            <th style="text-align:right">Nettó ár</th>
+            <th style="text-align:right">Bruttó ár</th>
+            <th>Upsell</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
-function toggleUpsell(code) {
-  if (expandedItems.has(code)) {
-    expandedItems.delete(code);
+// ═══════════════════════════════════════════════════════════════
+//  UPSELL TOGGLE
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Upsell cikkszám chipre kattintáskor:
+ * - ha nyitva van → bezárja
+ * - ha zárva van → megnyitja és megjeleníti az upsell sort
+ */
+function toggleUpsell(chipEl, group) {
+  const rowIdx  = chipEl.dataset.row;
+  const sku     = chipEl.dataset.sku.toLowerCase();
+  const upsellRow   = document.getElementById(`upsell-row-${rowIdx}`);
+  const upsellInner = document.getElementById(`upsell-inner-${rowIdx}`);
+
+  if (!openUpsells[rowIdx]) openUpsells[rowIdx] = new Set();
+  const set = openUpsells[rowIdx];
+
+  if (set.has(sku)) {
+    // bezárás
+    set.delete(sku);
+    chipEl.classList.remove('active');
   } else {
-    expandedItems.add(code);
+    // megnyitás
+    set.add(sku);
+    chipEl.classList.add('active');
   }
-  const st = window._tableState;
-  renderRows(st.group, st.priceMap, st.sizeMap, st.codeKey, st.nameKey, st.priceKey);
+
+  if (set.size === 0) {
+    upsellRow.style.display = 'none';
+    upsellInner.innerHTML = '';
+    return;
+  }
+
+  // Upsell termékek megjelenítése
+  upsellRow.style.display = '';
+  renderUpsellContent(upsellInner, [...set], group);
 }
 
-function formatPrice(val) {
-  if (!val || val === '—') return '—';
-  const num = parseFloat(String(val).replace(/\s/g,'').replace(',','.'));
-  if (isNaN(num)) return esc(val);
-  return num.toLocaleString('hu-HU', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' Ft';
+function renderUpsellContent(container, skus, group) {
+  let html = `<div class="upsell-title">Upsell termékek</div>
+    <table class="upsell-table">`;
+
+  skus.forEach(sku => {
+    // Termék adatok
+    const prod  = productMap[sku] || null;
+    // Ár megkeresése a csoporthoz
+    const price = priceRows.find(r => r.sku === sku && r.pricelist === group);
+
+    if (!price && !prod) return; // ha sehol nincs → kihagyja
+
+    const name  = (price && price.name) || (prod && prod.name) || '—';
+    const size  = prod ? prod.size : '';
+
+    html += `
+      <tr>
+        <td class="sku-cell">${escHtml(sku.toUpperCase())}</td>
+        <td class="name-cell">${escHtml(name)}</td>
+        <td class="size-cell">${escHtml(size)}</td>
+        <td class="price-cell price-net" style="text-align:right">${price ? formatFt(price.netPrice)   : '—'}</td>
+        <td class="price-cell price-brut" style="text-align:right">${price ? formatFt(price.grossPrice) : '—'}</td>
+      </tr>`;
+  });
+
+  html += '</table>';
+  container.innerHTML = html;
 }
 
-function esc(str) {
-  return String(str || '')
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+// ═══════════════════════════════════════════════════════════════
+//  SEGÉDFÜGGVÉNYEK
+// ═══════════════════════════════════════════════════════════════
+
+/** Upsell stringből tömb: "100BA1823, 200XY; 300ZZ" → ['100ba1823', '200xy', '300zz'] */
+function parseUpsellSkus(str) {
+  if (!str) return [];
+  return str.split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
 }
 
-// ─── Start ───────────────────────────────────────────────────────────────────
+/** XSS elleni HTML escape */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  INDÍTÁS
+// ═══════════════════════════════════════════════════════════════
 init();
 </script>
 </body>
