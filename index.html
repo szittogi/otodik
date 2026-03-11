@@ -128,6 +128,25 @@
     .upsell-chip:hover { background: color-mix(in srgb, var(--accent2) 28%, transparent); }
     .btn-up { padding: 3px 9px; font-size: 11px; }
 
+    /* upsell expand rows */
+    .upsell-chip { cursor: pointer; }
+    tr.upsell-sub { background: #0e1525 !important; }
+    tr.upsell-sub td { padding: 10px 16px; border-bottom: 1px solid #1a2235; }
+    tr.upsell-sub td.sku-cell { color: var(--accent2); font-size: 12px; padding-left: 32px; }
+    tr.upsell-sub td.name-cell { font-size: 14px; font-weight: 600; color: #c8d0e8; }
+    tr.upsell-sub .price-cell { color: var(--accent2); }
+    tr.upsell-sub .price-cell.brutto { color: #5a7060; }
+    tr.upsell-sub-header td {
+      padding: 5px 16px 4px 32px;
+      font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--accent2); background: #09121e; border-bottom: none;
+    }
+    tr.upsell-sub-end td { padding: 0; height: 4px; background: #060a10; border-bottom: 2px solid var(--border); }
+    tr.main-row.expanded { background: #111a2a !important; }
+    tr.main-row.expanded td { border-bottom: none; }
+    .expand-arrow { display: inline-block; margin-right: 6px; font-size: 11px; color: var(--accent2); transition: transform .15s; }
+    tr.main-row.expanded .expand-arrow { transform: rotate(90deg); }
+
     .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
 
     @media (max-width: 700px) {
@@ -153,7 +172,7 @@
       <input id="sku-search" type="text" placeholder="pl. KR124…" />
     </div>
 
-    <button class="btn" id="btn-clear-upsell" style="display:none">Upsell ✕</button>
+    <!-- upsell clear btn removed -->
     <button class="btn" id="btn-clear-sku"    style="display:none">Kereső ✕</button>
     <button class="btn" id="btn-clear-all">Mindent töröl</button>
   </div>
@@ -443,8 +462,11 @@ function parseStockSize(rows) {
   for (const row of rows) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
+    // Strip verbose prefix from size field e.g. "Méretei (HxSzxM [mm]) - 120x60x80"
+    let rawSize = sizeKey ? String(row[sizeKey] || '').trim() : '–';
+    rawSize = rawSize.replace(/^m[eé]retei?\s*\([^)]*\)\s*[-–]\s*/i, '').trim() || '–';
     state.stockMap[nSKU] = {
-      size  : sizeKey  ? String(row[sizeKey]  || '').trim() : '–',
+      size  : rawSize,
       stock : stockKey ? toNum(row[stockKey])                : null,
       upsell: upKey    ? String(row[upKey]    || '').trim() : '',
     };
@@ -546,14 +568,97 @@ function buildVisibleRows(arsor) {
 /* ═══════════════════════════════════════════════
    RENDER TABLE
 ═══════════════════════════════════════════════ */
+
+// Tracks which main-row SKUs have their upsell panel open
+const expandedUpsells = new Set();
+
+// Build a lookup: normSKU → full row data (for upsell sub-rows)
+function buildSkuLookup(rows) {
+  const map = {};
+  for (const r of rows) map[r.sku] = r;
+  return map;
+}
+
+function makeMainRow(r, skuLookup) {
+  const oos = r.stock !== null && r.stock <= 0;
+  const hasUpsell = r.upsellList.length > 0;
+  const isOpen = expandedUpsells.has(r.sku);
+
+  const upsellChips = hasUpsell
+    ? r.upsellList.map(u =>
+        `<span class="upsell-chip" data-upsell="${esc(u)}" data-parent="${esc(r.sku)}">${esc(u)}</span>`
+      ).join('')
+    : '—';
+
+  const tr = document.createElement('tr');
+  tr.className = 'main-row' + (isOpen ? ' expanded' : '');
+  tr.dataset.sku = r.sku;
+  tr.innerHTML = `
+    <td class="sku-cell${oos ? ' oos' : ''}">${esc(r.sku)}</td>
+    <td class="name-cell">${esc(r.name)}</td>
+    <td class="size-cell">${r.size && r.size !== '–' ? esc(r.size) : '—'}</td>
+    <td class="stock-cell">${r.stock === null ? '—' : r.stock}</td>
+    <td class="price-cell">${formatPrice(r.netto)}</td>
+    <td class="price-cell brutto">${formatPrice(r.brutto)}</td>
+    <td>${upsellChips}</td>
+    <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
+  `;
+  return tr;
+}
+
+function makeUpsellSubRows(parentSKU, upsellList, skuLookup) {
+  const frags = [];
+
+  // Header row
+  const hdr = document.createElement('tr');
+  hdr.className = 'upsell-sub-header';
+  hdr.dataset.upsellOf = parentSKU;
+  hdr.innerHTML = `<td colspan="8">↳ Kapcsolódó termékek</td>`;
+  frags.push(hdr);
+
+  for (const uSku of upsellList) {
+    const u = skuLookup[uSku];
+    const tr = document.createElement('tr');
+    tr.className = 'upsell-sub';
+    tr.dataset.upsellOf = parentSKU;
+    if (u) {
+      const uoos = u.stock !== null && u.stock <= 0;
+      tr.innerHTML = `
+        <td class="sku-cell${uoos ? ' oos' : ''}">${esc(u.sku)}</td>
+        <td class="name-cell">${esc(u.name)}</td>
+        <td class="size-cell">${u.size && u.size !== '–' ? esc(u.size) : '—'}</td>
+        <td class="stock-cell">${u.stock === null ? '—' : u.stock}</td>
+        <td class="price-cell">${formatPrice(u.netto)}</td>
+        <td class="price-cell brutto">${formatPrice(u.brutto)}</td>
+        <td></td><td></td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td class="sku-cell">${esc(uSku)}</td>
+        <td class="name-cell" style="color:var(--text-muted);font-style:italic">Nincs az árlistában</td>
+        <td colspan="6"></td>
+      `;
+    }
+    frags.push(tr);
+  }
+
+  // Closing spacer
+  const end = document.createElement('tr');
+  end.className = 'upsell-sub-end';
+  end.dataset.upsellOf = parentSKU;
+  end.innerHTML = '<td colspan="8"></td>';
+  frags.push(end);
+
+  return frags;
+}
+
 function renderTable() {
   const container = document.getElementById('table-container');
   let rows = state.visibleRows;
 
-  if (state.activeUpsellSKUs) rows = rows.filter(r => state.activeUpsellSKUs.has(r.sku));
   if (state.skuFilter) {
     const q = normalizeSKU(state.skuFilter);
-    rows = rows.filter(r => r.sku.includes(q));
+    rows = rows.filter(r => r.sku.includes(q) || r.name.toLowerCase().includes(state.skuFilter.toLowerCase()));
   }
 
   updateBadges(rows.length);
@@ -563,29 +668,21 @@ function renderTable() {
     return;
   }
 
+  const skuLookup = buildSkuLookup(state.visibleRows);
+
   const tbody = document.createElement('tbody');
   for (const r of rows) {
-    const oos  = r.stock !== null && r.stock <= 0;
-    const upsellHTML = r.upsellList.length
-      ? r.upsellList.map(u => `<span class="upsell-chip" data-upsell="${esc(u)}">${esc(u)}</span>`).join('')
-      : '—';
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="sku-cell${oos?' oos':''}">${esc(r.sku)}</td>
-      <td class="name-cell">${esc(r.name)}</td>
-      <td class="size-cell">${r.size && r.size !== '–' ? esc(r.size) : '—'}</td>
-      <td class="stock-cell">${r.stock === null ? '—' : r.stock}</td>
-      <td class="price-cell">${formatPrice(r.netto)}</td>
-      <td class="price-cell brutto">${formatPrice(r.brutto)}</td>
-      <td>${upsellHTML}</td>
-      <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
-    `;
-    tbody.appendChild(tr);
+    tbody.appendChild(makeMainRow(r, skuLookup));
+    // If this row's upsell is expanded, insert sub-rows immediately after
+    if (expandedUpsells.has(r.sku) && r.upsellList.length) {
+      makeUpsellSubRows(r.sku, r.upsellList, skuLookup).forEach(tr => tbody.appendChild(tr));
+    }
   }
 
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
-    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th><th>Nettó ár</th><th>Bruttó ár</th><th>Upsell</th><th></th>
+    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th>
+    <th>Nettó ár</th><th>Bruttó ár</th><th>Upsell</th><th></th>
   </tr></thead>`;
   table.appendChild(tbody);
 
@@ -596,20 +693,25 @@ function renderTable() {
   container.innerHTML = '';
   container.appendChild(wrap);
 
+  // Click: toggle upsell expand on chip click
   wrap.addEventListener('click', e => {
     const chip = e.target.closest('.upsell-chip');
-    if (chip) applyUpsellFilter(normalizeSKU(chip.dataset.upsell));
+    if (!chip) return;
+    const parentSKU = chip.dataset.parent;
+    if (expandedUpsells.has(parentSKU)) {
+      expandedUpsells.delete(parentSKU);
+    } else {
+      expandedUpsells.add(parentSKU);
+    }
+    renderTable();
   });
 }
 
 /* ═══════════════════════════════════════════════
-   UPSELL FILTER
+   UPSELL FILTER (badge clear still works)
 ═══════════════════════════════════════════════ */
 function applyUpsellFilter(sku) {
-  const comp = state.upsellIndex[sku];
-  state.activeUpsellSKUs = (comp && comp.size) ? comp : new Set([sku]);
-  document.getElementById('btn-clear-upsell').style.display = '';
-  renderTable();
+  // No longer used for full-page filter; kept for badge clear compatibility
 }
 
 /* ═══════════════════════════════════════════════
@@ -716,7 +818,7 @@ function initControls() {
   });
 
   document.getElementById('btn-clear-upsell').addEventListener('click', () => {
-    state.activeUpsellSKUs = null;
+    expandedUpsells.clear();
     document.getElementById('btn-clear-upsell').style.display = 'none';
     renderTable();
   });
