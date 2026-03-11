@@ -8,15 +8,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
-      --bg: #0d0f14;
-      --surface: #161922;
-      --surface2: #1e2330;
-      --border: #2a3045;
-      --accent: #e8c44a;
-      --accent2: #4ae8b0;
-      --text: #e8ecf4;
-      --text-muted: #7a8099;
-      --danger: #e84a6a;
+      --bg:       #07090d;
+      --surface:  #111520;
+      --surface2: #181d2b;
+      --border:   #252e45;
+      --accent:   #f0d060;
+      --accent2:  #3ef5b0;
+      --text:     #f0f4ff;
+      --text-muted: #8a95b8;
+      --danger:   #ff4f6e;
       --radius: 10px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -101,21 +101,23 @@
     thead { position: sticky; top: 60px; z-index: 10; }
     thead tr { border-bottom: 2px solid var(--border); }
     th {
-      padding: 11px 16px; text-align: left;
-      font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-      color: var(--text-muted); background: var(--surface2); white-space: nowrap;
+      padding: 12px 16px; text-align: left;
+      font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+      color: #5a6688; background: #0e1120; white-space: nowrap; border-bottom: 2px solid var(--border);
     }
     tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: var(--surface2); }
-    td { padding: 13px 16px; vertical-align: middle; font-size: 14px; }
+    tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
+    tbody tr:hover { background: #1e2535; }
+    td { padding: 14px 16px; vertical-align: middle; font-size: 14px; }
 
-    .sku-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
-    .sku-cell.oos { color: var(--danger); opacity: .6; }
-    .name-cell { max-width: 500px; white-space: normal; font-weight: 600; font-size: 15px; }
-    .size-badge { display: inline-block; padding: 2px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
-    .price-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); }
-    .stock-val { font-family: 'DM Mono', monospace; font-size: 12px; text-align: center; }
+    .sku-cell { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .sku-cell.oos { color: var(--danger); opacity: .75; }
+    .name-cell { max-width: 460px; white-space: normal; font-weight: 700; font-size: 15px; color: var(--text); }
+    .size-cell { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .stock-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); text-align: right; white-space: nowrap; }
+    .price-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; color: var(--accent); text-align: right; white-space: nowrap; }
+    .price-cell.brutto { color: var(--text-muted); font-size: 13px; }
     .upsell-chip {
       display: inline-block; padding: 2px 8px; margin: 1px 2px;
       background: color-mix(in srgb, var(--accent2) 12%, transparent);
@@ -412,24 +414,45 @@ function parsePricelist(rows) {
 function parseStockSize(rows) {
   state.stockMap = {};
   if (!rows.length) return;
-  const keys     = Object.keys(rows[0]);
-  const codeKey  = keys.find(k=>/cikkszam|cikk_szam|sku|kod|code|item/i.test(k)) || keys[0];
-  const sizeKey  = keys.find(k=>/meret|size|méret|dimenz/i.test(k));
-  const stockKey = keys.find(k=>/keszlet|keszleten|stock|qty|mennyiseg|db|pieces|quantity/i.test(k));
-  const upKey    = keys.find(k=>/upsell|kapcsolt|related/i.test(k));
+  const keys = Object.keys(rows[0]);
 
-  console.log('Size cols – code:', codeKey, 'size:', sizeKey, 'stock:', stockKey, 'upsell:', upKey);
-  console.log('Size sample:', rows[0]);
+  // Cikkszám – exact first
+  const codeKey =
+    keys.find(k => /^cikkszam$|^cikkszám$|^sku$|^kod$|^code$/i.test(k.trim())) ||
+    keys.find(k => /cikkszam|cikk_szam|sku|item/i.test(k)) ||
+    keys[0];
+
+  // Méret – exact "Méret" first, then patterns; skip columns with "Készlet" in name
+  const sizeKey =
+    keys.find(k => /^méret$|^meret$/i.test(k.trim())) ||
+    keys.find(k => /méret|meret|size/i.test(k) && !/keszlet|készlet/i.test(k));
+
+  // Készleten – exact "Készleten" first
+  const stockKey =
+    keys.find(k => /^készleten$|^keszleten$/i.test(k.trim())) ||
+    keys.find(k => /készleten|keszleten/i.test(k)) ||
+    keys.find(k => /keszlet|készlet|stock|qty|mennyiseg|db|pieces|quantity/i.test(k));
+
+  const upKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
+
+  console.warn('=== KÉSZLET/MÉRET PARSE ===');
+  console.warn('codeKey:', codeKey, '| sizeKey:', sizeKey, '| stockKey:', stockKey);
+  console.warn('Összes oszlop:', keys);
+  console.warn('1. sor:', rows[0]);
 
   for (const row of rows) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
     state.stockMap[nSKU] = {
-      size  : sizeKey  ? String(row[sizeKey]||'').trim()  : '–',
-      stock : stockKey ? toNum(row[stockKey])              : null,
-      upsell: upKey    ? String(row[upKey]||'').trim()     : '',
+      size  : sizeKey  ? String(row[sizeKey]  || '').trim() : '–',
+      stock : stockKey ? toNum(row[stockKey])                : null,
+      upsell: upKey    ? String(row[upKey]    || '').trim() : '',
     };
   }
+  console.warn('Készlet tétel count:', Object.keys(state.stockMap).length);
+  // Sample
+  const sample = Object.entries(state.stockMap).slice(0,3);
+  sample.forEach(([k,v]) => console.warn(' ', k, '->', v));
 }
 
 /* ═══════════════════════════════════════════════
@@ -489,12 +512,18 @@ function buildVisibleRows(arsor) {
   const priceRows = state.priceByArsor[arsor] || [];
   state.visibleRows = [];
 
+  // Find nettó + bruttó keys from any row
+  const sampleRow = priceRows[0] || {};
+  const rowKeys = Object.keys(sampleRow);
+  const nettoKey  = rowKeys.find(k => /nett.*ár|nett.*ar|nettó|netto/i.test(k));
+  const bruttoKey = rowKeys.find(k => /brutt.*ár|brutt.*ar|bruttó|brutto/i.test(k));
+
   for (const row of priceRows) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
 
-    // Ár: __priceKey marker (set during parse)
-    const price = row.__priceKey ? (row[row.__priceKey] ?? '') : '';
+    const netto  = nettoKey  ? (row[nettoKey]  ?? '') : (row.__priceKey ? (row[row.__priceKey] ?? '') : '');
+    const brutto = bruttoKey ? (row[bruttoKey] ?? '') : '';
 
     const info = state.stockMap[nSKU];
     const upStock = info?.upsell || '';
@@ -503,7 +532,8 @@ function buildVisibleRows(arsor) {
     state.visibleRows.push({
       sku       : nSKU,
       name      : String(row[nameKey]||'').trim(),
-      price,
+      netto,
+      brutto,
       size      : info?.size  ?? '–',
       stock     : info?.stock ?? null,
       upsellList: parseUpsellList(upStock || upPrice),
@@ -543,9 +573,10 @@ function renderTable() {
     tr.innerHTML = `
       <td class="sku-cell${oos?' oos':''}">${esc(r.sku)}</td>
       <td class="name-cell">${esc(r.name)}</td>
-      <td>${r.size && r.size !== '–' ? `<span class="size-badge">${esc(r.size)}</span>` : '—'}</td>
-      <td class="stock-val">${r.stock === null ? '—' : r.stock}</td>
-      <td><span class="price-val">${formatPrice(r.price)}</span></td>
+      <td class="size-cell">${r.size && r.size !== '–' ? esc(r.size) : '—'}</td>
+      <td class="stock-cell">${r.stock === null ? '—' : r.stock}</td>
+      <td class="price-cell">${formatPrice(r.netto)}</td>
+      <td class="price-cell brutto">${formatPrice(r.brutto)}</td>
       <td>${upsellHTML}</td>
       <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
     `;
@@ -554,7 +585,7 @@ function renderTable() {
 
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
-    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th><th>Ár</th><th>Upsell</th><th></th>
+    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th><th>Nettó ár</th><th>Bruttó ár</th><th>Upsell</th><th></th>
   </tr></thead>`;
   table.appendChild(tbody);
 
