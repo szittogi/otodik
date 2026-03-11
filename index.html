@@ -1,271 +1,283 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Árlista</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<style>
-  :root {
-    --bg:        #0f1117;
-    --surface:   #181c27;
-    --surface2:  #1f2435;
-    --border:    #2a3050;
-    --accent:    #4f8ef7;
-    --accent2:   #7c5cfc;
-    --text:      #e2e6f0;
-    --muted:     #7a85a0;
-    --danger:    #e05a5a;
-    --danger-bg: rgba(224,90,90,.12);
-    --radius:    8px;
-    --font-head: 'DM Mono','Courier New',monospace;
-    --font-body: 'DM Sans','Segoe UI',sans-serif;
-    --shadow:    0 4px 24px rgba(0,0,0,.4);
-  }
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
-  body{background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:14px;min-height:100vh}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Árlista</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161922;
+      --surface2: #1e2330;
+      --border: #2a3045;
+      --accent: #e8c44a;
+      --accent2: #4ae8b0;
+      --text: #e8ecf4;
+      --text-muted: #7a8099;
+      --danger: #e84a6a;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  /* ── TOP BAR ── */
-  #topbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 20px;box-shadow:var(--shadow)}
-  #topbar-inner{display:flex;flex-wrap:wrap;gap:12px;align-items:center;max-width:1600px;margin:0 auto}
-  .logo{font-family:var(--font-head);font-size:15px;font-weight:500;color:var(--accent);letter-spacing:.05em;white-space:nowrap}
-  .ctrl-group{display:flex;align-items:center;gap:8px;flex:1 1 200px}
-  label.ctrl-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
-  input[type="text"],select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 12px;font-family:var(--font-body);font-size:13px;outline:none;transition:border-color .15s;min-width:0;width:100%}
-  input[type="text"]:focus,select:focus{border-color:var(--accent)}
-  .autocomplete-wrap{position:relative;flex:1 1 180px}
-  #customer-dropdown{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);max-height:260px;overflow-y:auto;z-index:200;box-shadow:var(--shadow);display:none}
-  #customer-dropdown.open{display:block}
-  .dd-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border)}
-  .dd-item:last-child{border-bottom:none}
-  .dd-item:hover,.dd-item.active{background:var(--accent);color:#fff}
-  #badge-row{width:100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px;min-height:24px}
-  .badge{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--muted)}
-  .badge span{color:var(--text);font-weight:500}
-  .badge.accent-badge{border-color:var(--accent);color:var(--accent)}
-  .badge.upsell-badge{border-color:var(--accent2);color:var(--accent2)}
-  #info-row{font-size:11px;color:var(--muted);margin-left:auto;white-space:nowrap}
-  .btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 14px;font-family:var(--font-body);font-size:12px;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
-  .btn:hover{border-color:var(--accent);color:var(--accent)}
-  .btn-sm{padding:3px 10px;font-size:11px;border-radius:6px}
-  .btn-up{background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--muted);padding:2px 8px;cursor:pointer;font-size:12px;transition:all .15s}
-  .btn-up:hover{border-color:var(--accent);color:var(--accent)}
+    header {
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex; align-items: center; gap: 24px;
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    header .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); white-space: nowrap; }
 
-  /* ── MAIN ── */
-  #main{max-width:1600px;margin:0 auto;padding:20px}
+    /* header controls */
+    .header-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; }
+    .ctrl-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
 
-  /* ── UPLOAD PANEL ── */
-  #upload-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;margin-bottom:20px}
-  #upload-panel h2{font-family:var(--font-head);font-size:14px;color:var(--accent);margin-bottom:6px;letter-spacing:.05em}
-  #upload-panel p{color:var(--muted);font-size:12px;margin-bottom:20px;line-height:1.6}
-  .upload-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-  .upload-card{background:var(--surface2);border:1px dashed var(--border);border-radius:var(--radius);padding:16px;transition:border-color .2s}
-  .upload-card.loaded{border-color:var(--accent);border-style:solid}
-  .upload-card h3{font-size:12px;font-family:var(--font-head);color:var(--muted);margin-bottom:8px;letter-spacing:.04em}
-  .upload-card .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--border);margin-right:6px;vertical-align:middle;transition:background .2s}
-  .upload-card.loaded .status-dot{background:var(--accent)}
-  .file-input-label{display:block;margin-top:10px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);cursor:pointer;text-align:center;transition:all .15s}
-  .file-input-label:hover{border-color:var(--accent);color:var(--accent)}
-  input[type="file"]{display:none}
-  .file-name{font-size:11px;color:var(--muted);margin-top:6px;word-break:break-all}
-  #btn-load-urls{margin-top:20px;padding:9px 20px;font-size:13px}
-  #load-progress{margin-top:14px;font-size:12px;color:var(--muted)}
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-wrap input {
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 600; width: 240px; transition: border-color .2s; outline: none;
+    }
+    .autocomplete-wrap input:focus { border-color: var(--accent); }
+    #customer-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      max-height: 260px; overflow-y: auto; z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5); display: none;
+    }
+    #customer-dropdown.open { display: block; }
+    .dd-item { padding: 9px 14px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .dd-item:last-child { border-bottom: none; }
+    .dd-item:hover, .dd-item.active { background: var(--accent); color: #000; }
 
-  /* ── STATUS ── */
-  #status{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;color:var(--muted);font-size:13px}
-  #status.error{border-color:var(--danger);color:var(--danger);background:var(--danger-bg);text-align:left;padding:16px 20px}
-  .spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:8px}
-  @keyframes spin{to{transform:rotate(360deg)}}
+    .search-wrap { position: relative; }
+    .search-wrap::before { content: '⌕'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none; }
+    .search-wrap input {
+      padding: 8px 14px 8px 32px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: 'Syne', sans-serif;
+      font-size: 13px; width: 200px; transition: border-color .2s; outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
 
-  /* ── TABLE ── */
-  #table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  thead{position:sticky;top:72px;z-index:10}
-  thead th{background:var(--surface2);color:var(--muted);font-family:var(--font-head);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
-  tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
-  tbody tr:last-child{border-bottom:none}
-  tbody tr:hover{background:var(--surface2)}
-  td{padding:9px 14px;vertical-align:middle;white-space:nowrap}
-  .sku-cell{font-family:var(--font-head);font-size:12px}
-  .sku-cell.out-of-stock{color:var(--danger);opacity:.65}
-  .name-cell{white-space:normal;max-width:320px}
-  .price-cell{font-variant-numeric:tabular-nums;text-align:right}
-  .stock-cell{text-align:center}
-  .upsell-link{display:inline-block;background:rgba(124,92,252,.15);border:1px solid rgba(124,92,252,.4);border-radius:4px;padding:2px 7px;font-size:11px;font-family:var(--font-head);color:var(--accent2);cursor:pointer;margin:1px 2px;transition:background .15s;white-space:nowrap}
-  .upsell-link:hover{background:rgba(124,92,252,.35)}
-  #empty-msg{padding:40px;text-align:center;color:var(--muted);font-size:14px}
-</style>
+    .btn {
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-muted); font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: .5px; cursor: pointer;
+      white-space: nowrap; transition: all .15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* badge row */
+    #badge-row {
+      width: 100%; padding: 6px 40px 0;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 28px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 11px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+    }
+    .badge.ab { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
+    .badge.ub { border-color: color-mix(in srgb, var(--accent2) 50%, transparent); color: var(--accent2); }
+    #info-badge { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+
+    /* loading / error */
+    .loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: var(--text-muted); font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: color-mix(in srgb,var(--danger) 10%,transparent); border: 1px solid color-mix(in srgb,var(--danger) 30%,transparent); border-radius: var(--radius); padding: 16px 20px; color: var(--danger); font-size: 13px; margin: 20px 40px; white-space: pre-wrap; }
+
+    /* main */
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px 40px; }
+
+    /* table */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { position: sticky; top: 60px; z-index: 10; }
+    thead tr { border-bottom: 2px solid var(--border); }
+    th {
+      padding: 10px 14px; text-align: left;
+      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text-muted); background: var(--surface2); white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    td { padding: 10px 14px; vertical-align: middle; }
+
+    .sku-cell { font-family: 'DM Mono', monospace; font-size: 11px; }
+    .sku-cell.oos { color: var(--danger); opacity: .6; }
+    .name-cell { max-width: 340px; white-space: normal; font-weight: 600; }
+    .size-badge { display: inline-block; padding: 2px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+    .price-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); }
+    .stock-val { font-family: 'DM Mono', monospace; font-size: 12px; text-align: center; }
+    .upsell-chip {
+      display: inline-block; padding: 2px 8px; margin: 1px 2px;
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent2) 35%, transparent);
+      border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--accent2); cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    .upsell-chip:hover { background: color-mix(in srgb, var(--accent2) 28%, transparent); }
+    .btn-up { padding: 3px 9px; font-size: 11px; }
+
+    .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 700px) {
+      header { padding: 12px 16px; }
+      #badge-row { padding: 4px 16px 0; }
+      .container { padding: 16px; }
+    }
+  </style>
 </head>
 <body>
 
-<!-- TOP BAR (hidden until data loaded) -->
-<div id="topbar" style="display:none">
-  <div id="topbar-inner">
-    <div class="logo">⬡ Árlista</div>
-    <div class="ctrl-group">
-      <label class="ctrl-label">Vevő</label>
-      <div class="autocomplete-wrap">
-        <input id="customer-input" type="text" placeholder="Keress vevőt…" autocomplete="off" />
-        <div id="customer-dropdown"></div>
-      </div>
+<header>
+  <div class="logo">ÁRLISTA</div>
+  <div class="header-controls">
+    <span class="ctrl-label">Vevő</span>
+    <div class="autocomplete-wrap">
+      <input id="customer-input" type="text" placeholder="Keress vevőt…" autocomplete="off" />
+      <div id="customer-dropdown"></div>
     </div>
-    <div class="ctrl-group">
-      <label class="ctrl-label">Cikkszám</label>
+
+    <span class="ctrl-label">Cikkszám</span>
+    <div class="search-wrap">
       <input id="sku-search" type="text" placeholder="pl. KR124…" />
     </div>
-    <button class="btn btn-sm" id="btn-clear-upsell" style="display:none">Upsell törlése ✕</button>
-    <button class="btn btn-sm" id="btn-clear-sku"    style="display:none">Kereső törlése ✕</button>
-    <button class="btn btn-sm" id="btn-clear-all">Mindent töröl</button>
-    <div id="info-row">—</div>
+
+    <button class="btn" id="btn-clear-upsell" style="display:none">Upsell ✕</button>
+    <button class="btn" id="btn-clear-sku"    style="display:none">Kereső ✕</button>
+    <button class="btn" id="btn-clear-all">Mindent töröl</button>
   </div>
-  <div id="badge-row" style="max-width:1600px;margin:6px auto 0;padding:0 20px;"></div>
-</div>
+  <div id="badge-row"></div>
+</header>
 
-<div id="main">
+<div id="app-loading" class="loading"><div class="spinner"></div> Adatok betöltése…</div>
+<div id="app-error"   class="error-box" style="display:none"></div>
 
-  <!-- UPLOAD / LOAD PANEL -->
-  <div id="upload-panel">
-    <h2>ADATFORRÁS BETÖLTÉSE</h2>
-    <p>
-      A fájlok CORS-védelem miatt nem tölthetők be közvetlenül URL-ről.<br>
-      <strong>Töltsd le a három Excel fájlt a CloudERP-ből, majd válaszd ki őket itt.</strong><br>
-      Vagy próbáld meg az automatikus URL-betöltést (ha a szerver engedi).
-    </p>
-
-    <div class="upload-grid">
-      <!-- Card 1: Customers -->
-      <div class="upload-card" id="card-customers">
-        <h3><span class="status-dot"></span>1. Vevőadatok</h3>
-        <div class="file-name" id="name-customers">Nincs fájl kiválasztva</div>
-        <label class="file-input-label" for="file-customers">📂 Fájl kiválasztása…</label>
-        <input type="file" id="file-customers" accept=".xlsx,.xls,.csv" />
-        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
-          <a id="dl-customers" href="https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVktUS0lhQUdybnRoeDJWTXRTMk90UXMwSy0yZ0VQTVc5YjNOYTQzRkZGcnBrTDBnOVhQWUg3MGRrLWNHbTRWdDBUcjlDTG9na0pieUtMQTJBLU5LTGRqRGpvV2RoZDZBS0JNNkczQzdSajYyWDA9" target="_blank" style="color:var(--accent);text-decoration:none">⬇ Letöltés CloudERP-ből</a>
-        </div>
-      </div>
-
-      <!-- Card 2: Pricelist -->
-      <div class="upload-card" id="card-pricelist">
-        <h3><span class="status-dot"></span>2. Árlista</h3>
-        <div class="file-name" id="name-pricelist">Nincs fájl kiválasztva</div>
-        <label class="file-input-label" for="file-pricelist">📂 Fájl kiválasztása…</label>
-        <input type="file" id="file-pricelist" accept=".xlsx,.xls,.csv" />
-        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
-          <a id="dl-pricelist" href="https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkt3U3J3a0ZGX3MwS3B1b3VXb25jX0ZOZ01XOWdILTNyc2ZWQWxISDNGdWh0eXhuNGlRTjdOQlhjZDlyTDFPcmxyUzNzQncwMmVUNUFlSkJySW9CaFk1R28zRnJtbktFaDhMMFdaMUFZOGx5UGs9" target="_blank" style="color:var(--accent);text-decoration:none">⬇ Letöltés CloudERP-ből</a>
-        </div>
-      </div>
-
-      <!-- Card 3: Stock/Size -->
-      <div class="upload-card" id="card-stocksize">
-        <h3><span class="status-dot"></span>3. Méret + Készlet</h3>
-        <div class="file-name" id="name-stocksize">Nincs fájl kiválasztva</div>
-        <label class="file-input-label" for="file-stocksize">📂 Fájl kiválasztása…</label>
-        <input type="file" id="file-stocksize" accept=".xlsx,.xls,.csv" />
-        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
-          <a id="dl-stocksize" href="https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkxUUV9ZMDZzMXEzeUhGS3Bqd25zTjhHU1g4MWpEWkd6NUppbndOaV93SGg2SnRRcExlX0JJT28xM3lMOWFJdzFtQzluNjNEbGc5dUItbUQ2V0RrN1Z6VkNtQlhhdG9iWmpJa3JtVEVEQUpmWTQ9" target="_blank" style="color:var(--accent);text-decoration:none">⬇ Letöltés CloudERP-ből</a>
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:12px;align-items:center;margin-top:20px;flex-wrap:wrap">
-      <button class="btn" id="btn-process" disabled>▶ Betöltés és feldolgozás</button>
-      <button class="btn" id="btn-load-urls">⚡ Automatikus betöltés URL-ről</button>
-      <div id="load-progress"></div>
-    </div>
+<div id="app-main" style="display:none">
+  <div class="container">
+    <div id="table-container"></div>
   </div>
-
-  <div id="status" style="display:none"></div>
-  <div id="table-container"></div>
 </div>
 
 <script>
-/* ══════════════════════════════════════════════════════════
-   CONFIG – Direct URLs (used for auto-load attempt)
-══════════════════════════════════════════════════════════ */
-const URLS = {
-  customers : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVktUS0lhQUdybnRoeDJWTXRTMk90UXMwSy0yZ0VQTVc5YjNOYTQzRkZGcnBrTDBnOVhQWUg3MGRrLWNHbTRWdDBUcjlDTG9na0pieUtMQTJBLU5LTGRqRGpvV2RoZDZBS0JNNkczQzdSajYyWDA9',
-  pricelist : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkt3U3J3a0ZGX3MwS3B1b3VXb25jX0ZOZ01XOWdILTNyc2ZWQWxISDNGdWh0eXhuNGlRTjdOQlhjZDlyTDFPcmxyUzNzQncwMmVUNUFlSkJySW9CaFk1R28zRnJtbktFaDhMMFdaMUFZOGx5UGs9',
-  stocksize : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkxUUV9ZMDZzMXEzeUhGS3Bqd25zTjhHU1g0MWpEWkd6NUppbndOaV93SGg2SnRRcExlX0JJT28xM3lMOWFJdzFtQzluNjNEbGc5dUItbUQ2V0RrN1Z6VkNtQlhhdG9iWmpJa3JtVEVEQUpmWTQ9',
-};
+/* ═══════════════════════════════════════════════
+   CONFIG – URL-ek
+═══════════════════════════════════════════════ */
+const URL_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBKRkhJMUtwRkR3UXFUdTFPS1ZXd1Utd1Vrd09DYVl6Q1dKMVBmdkt1LW1tT1FWWEZ1VW9FYUNDdklqbTdOc1VvX0tGd29Lc05aRTNzMWg0XzdoSUNSUHJPRzBLRWxTS2hGajhlZzRYZ25IUFk9';
+const URL_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBtQTVXd0UxOV9QSHBoMm9EUkJpakVZZXpacFp0MVBNVnBicTZFZFQ2RXFGMDY3VkFPRnFna1BnMTdIMkNJd3lyTW5VVzlEZDZ6ZjFrY0NZdkNXa0pGcEZhRWY5b19Rc2pQcUFVTVF0STJ2MzQ9';
+const URL_SIZES     = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzFVTkF6NUVJdG9kd2dSb2Q2OXJYX2VqQmYxLVVaOGs0RW9IVVlpemE0VXE3d2J6Rld6TFBaX1ZvQzlQdllEa3BCb1BkLTl5VjBVN0I0SDhtRGhvU3djNXZRalF5dVlVdXdIWndrZkhkT0l1VkU9';
 
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    HELPERS
-══════════════════════════════════════════════════════════ */
-function normalizeSKU(sku) {
-  return String(sku || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+═══════════════════════════════════════════════ */
+function normalizeSKU(s) {
+  return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatPrice(val) {
+  if (!val && val !== 0) return '—';
+  const num = parseFloat(String(val).replace(/\s/g,'').replace(',','.'));
+  if (isNaN(num)) return esc(String(val));
+  return num.toLocaleString('hu-HU', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' Ft';
+}
+
+function toNum(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+/* Find column value by flexible header matching */
 function findCol(row, candidates) {
   for (const key of Object.keys(row)) {
-    const k = key.toLowerCase().replace(/[\s_\-]/g, '');
+    const k = key.toLowerCase().replace(/[\s_\-]/g,'');
     for (const c of candidates) {
-      if (k.includes(c.toLowerCase().replace(/[\s_\-]/g, ''))) return row[key];
+      if (k.includes(c.toLowerCase().replace(/[\s_\-]/g,''))) return row[key];
     }
   }
   return undefined;
 }
+
 function parseUpsellList(str) {
   return String(str || '').split(/[,;|\s]+/).map(s => normalizeSKU(s)).filter(Boolean);
 }
-function toNum(v) {
-  if (v === undefined || v === null || v === '') return null;
-  const n = parseFloat(String(v).replace(',', '.'));
-  return isNaN(n) ? null : n;
-}
-function fmtPrice(v) {
-  const n = toNum(v);
-  if (n === null) return '–';
-  return n.toLocaleString('hu-HU', { minimumFractionDigits: 0 }) + ' Ft';
-}
-function escHtml(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ═══════════════════════════════════════════════
+   FETCH + PARSE EXCEL
+═══════════════════════════════════════════════ */
+async function fetchExcel(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' – ' + url.slice(-40));
+  const buffer = await res.arrayBuffer();
+  const bytes  = new Uint8Array(buffer);
+  const isXLSX = bytes[0] === 0x50 && bytes[1] === 0x4B;
+
+  if (isXLSX) {
+    const wb    = XLSX.read(buffer, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  }
+
+  // CSV fallback with encoding detection
+  for (const enc of ['utf-8','windows-1250','iso-8859-2']) {
+    try {
+      const text = new TextDecoder(enc, {fatal:true}).decode(buffer);
+      if ((text.match(/[a-zÀ-ž0-9 ;,.]/gi)||[]).length / text.slice(0,300).length > 0.6)
+        return parseCSV(text);
+    } catch(e) {}
+  }
+  return parseCSV(new TextDecoder('windows-1250').decode(buffer));
 }
 
-/* ══════════════════════════════════════════════════════════
-   EXCEL PARSING
-══════════════════════════════════════════════════════════ */
-
-/** Parse ArrayBuffer → array of row objects via SheetJS */
-function parseExcelBuffer(buf) {
-  const wb = XLSX.read(buf, { type: 'array' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: '' });
-}
-
-/** Read local File object → ArrayBuffer */
-function readFileAsBuffer(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result);
-    reader.onerror = () => reject(new Error('Fájl olvasási hiba: ' + file.name));
-    reader.readAsArrayBuffer(file);
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = splitLine(line, sep);
+    const obj  = {};
+    headers.forEach((h,i) => { obj[h] = (vals[i]||'').trim().replace(/^"|"$/g,''); });
+    return obj;
   });
 }
 
-/**
- * Try to fetch URL directly.
- * Returns ArrayBuffer on success, throws on failure.
- */
-async function fetchBuffer(url) {
-  const resp = await fetch(url, { credentials: 'include' });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  const ct = resp.headers.get('content-type') || '';
-  if (ct.includes('text/html') || ct.includes('application/json')) {
-    throw new Error('Nem Excel érkezett (' + ct + ')');
+function splitLine(line, sep) {
+  const r = []; let cur = '', inQ = false;
+  for (const c of line) {
+    if (c==='"') inQ=!inQ;
+    else if (c===sep && !inQ) { r.push(cur); cur=''; }
+    else cur+=c;
   }
-  return resp.arrayBuffer();
+  r.push(cur);
+  return r;
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    STATE
-══════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════ */
 const state = {
   customers        : [],
-  customerMap      : {},
-  priceByArsor     : {},
-  stockMap         : {},
-  upsellIndex      : {},
+  priceRows        : [],
+  sizeRows         : [],
+  // built indexes
+  stockMap         : {},   // normSKU → { size, stock, upsell }
+  priceByArsor     : {},   // arsorKey → [ priceRow ]
+  upsellIndex      : {},   // normSKU → Set<normSKU>
+  // UI
   selectedCustomer : null,
   activeArsor      : null,
   visibleRows      : [],
@@ -273,184 +285,272 @@ const state = {
   skuFilter        : '',
 };
 
-// Loaded data buffers from file inputs
-const fileData = { customers: null, pricelist: null, stocksize: null };
-
-/* ══════════════════════════════════════════════════════════
-   PARSING
-══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   PARSE CUSTOMERS
+═══════════════════════════════════════════════ */
 function parseCustomers(rows) {
   state.customers = [];
-  state.customerMap = {};
-  for (const row of rows) {
-    const name   = String(findCol(row, ['partner','vevo','nev','name','ugyfel']) ?? '').trim();
-    const groups = String(findCol(row, ['csoport','group','groups','kategoria','category']) ?? '');
-    if (!name) continue;
-    const groupList = groups.split(/[,;|\n]+/).map(g => g.trim()).filter(Boolean);
-    const obj = { name, groups: groupList };
-    state.customers.push(obj);
-    state.customerMap[name.toLowerCase()] = obj;
+  const sample = rows[0] || {};
+  const keys   = Object.keys(sample);
+
+  // Score columns to find name
+  function score(k) {
+    const vals = rows.slice(0,5).map(r => String(r[k]||''));
+    const avg  = vals.reduce((s,v)=>s+v.length,0)/vals.length;
+    const hasSpace = vals.some(v=>v.includes(' '));
+    const isNum = vals.every(v=>/^\d+$/.test(v));
+    return isNum ? -1 : avg + (hasSpace?20:0);
   }
-  state.customers.sort((a, b) => a.name.localeCompare(b.name, 'hu'));
+
+  let nameKey = keys.find(k=> k==='Név') ||
+                keys.find(k=> /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k)) ||
+                keys.slice().sort((a,b)=>score(b)-score(a))[0];
+
+  // Groups: find the column that holds group/csoport info
+  let groupKey = keys.find(k=> /csoport|group|kategor|pricegroup|ar.*csoport|arkategoria/i.test(k));
+  if (!groupKey) groupKey = keys.find(k=> k!==nameKey) || keys[0];
+
+  console.log('Customer cols – name:', nameKey, 'group:', groupKey);
+  console.log('Customer sample:', rows[0]);
+
+  for (const row of rows) {
+    const name = String(row[nameKey]||'').trim();
+    if (!name) continue;
+    // groups field can hold multiple groups (comma/semicolon separated)
+    const rawGroup = String(row[groupKey]||'');
+    const groups   = rawGroup.split(/[,;|\n]+/).map(g=>g.trim()).filter(Boolean);
+    state.customers.push({ name, groups });
+  }
+  state.customers.sort((a,b)=>a.name.localeCompare(b.name,'hu'));
 }
 
+/* ═══════════════════════════════════════════════
+   PARSE PRICELIST
+═══════════════════════════════════════════════ */
 function parsePricelist(rows) {
   state.priceByArsor = {};
-  for (const row of rows) {
-    const arsorVal = String(
-      findCol(row, ['arsor','arlista','arlistacsoport','pricelist','price_list','listacsop','arlistagrup']) ?? ''
-    ).trim().toLowerCase();
-    if (!arsorVal) continue;
-    if (!state.priceByArsor[arsorVal]) state.priceByArsor[arsorVal] = [];
-    state.priceByArsor[arsorVal].push(row);
+  if (!rows.length) return;
+
+  const keys    = Object.keys(rows[0]);
+  const codeKey = keys.find(k=>/cikkszam|cikk_szam|sku|kod|code|item/i.test(k)) || keys[0];
+  const nameKey = keys.find(k=>/cikknev|nev$|name$|megnevezes|leiras/i.test(k)) || keys[1] || keys[0];
+
+  // arsor column: a column whose values start with "arsor"
+  let arsorKey = keys.find(k=>/arsor|arlista|arlistacsoport|pricelist|price_list|listacsop/i.test(k));
+  // fallback: find column where many values start with "arsor"
+  if (!arsorKey) {
+    for (const k of keys) {
+      const matches = rows.slice(0,20).filter(r=>String(r[k]).toLowerCase().startsWith('arsor')).length;
+      if (matches >= 3) { arsorKey = k; break; }
+    }
   }
+
+  // If there's no dedicated arsor column, each non-code/name column might BE the arsor name
+  // (i.e. the column header itself is the arsor group, and rows appear under it)
+  const priceColKeys = keys.filter(k=>k!==codeKey && k!==nameKey && k!==arsorKey);
+
+  console.log('Price cols – code:', codeKey, 'name:', nameKey, 'arsor:', arsorKey, 'priceCols:', priceColKeys);
+  console.log('Price sample:', rows[0]);
+
+  // upsell column in pricelist
+  const upsellKey = keys.find(k=>/upsell|kapcsolt|related/i.test(k));
+
+  for (const row of rows) {
+    const rawCode = String(row[codeKey]||'').trim();
+    if (!rawCode) continue;
+
+    if (arsorKey) {
+      // Each row has an explicit arsor value
+      const arsor = String(row[arsorKey]||'').trim().toLowerCase();
+      if (!arsor) continue;
+      if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+      state.priceByArsor[arsor].push(row);
+    } else {
+      // Column-per-arsor layout: each price column header IS the arsor
+      for (const pk of priceColKeys) {
+        const arsor = pk.trim().toLowerCase();
+        if (!arsor.startsWith('arsor')) continue;
+        if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+        // Clone row but mark which price column to use
+        state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
+      }
+    }
+  }
+
+  state._priceMeta = { codeKey, nameKey, upsellKey };
+  console.log('Arsor keys found:', Object.keys(state.priceByArsor));
 }
 
+/* ═══════════════════════════════════════════════
+   PARSE STOCK / SIZE
+═══════════════════════════════════════════════ */
 function parseStockSize(rows) {
   state.stockMap = {};
+  if (!rows.length) return;
+  const keys     = Object.keys(rows[0]);
+  const codeKey  = keys.find(k=>/cikkszam|cikk_szam|sku|kod|code|item/i.test(k)) || keys[0];
+  const sizeKey  = keys.find(k=>/meret|size|méret|dimenz/i.test(k));
+  const stockKey = keys.find(k=>/keszlet|keszleten|stock|qty|mennyiseg|db|pieces|quantity/i.test(k));
+  const upKey    = keys.find(k=>/upsell|kapcsolt|related/i.test(k));
+
+  console.log('Size cols – code:', codeKey, 'size:', sizeKey, 'stock:', stockKey, 'upsell:', upKey);
+  console.log('Size sample:', rows[0]);
+
   for (const row of rows) {
-    const rawSKU = findCol(row, ['sku','cikkszam','cikk','kod','code','item','cikkszám']) ?? '';
-    const nSKU   = normalizeSKU(rawSKU);
+    const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
-    const size   = String(findCol(row, ['meret','size','méret']) ?? '').trim() || '–';
-    const stock  = toNum(findCol(row, ['keszlet','keszleten','stock','qty','mennyiseg','db','pieces','quantity','készlet']));
-    const upsell = String(findCol(row, ['upsell','upsell_sku','kapcsolt','related']) ?? '').trim();
-    state.stockMap[nSKU] = { size, stock, upsell };
+    state.stockMap[nSKU] = {
+      size  : sizeKey  ? String(row[sizeKey]||'').trim()  : '–',
+      stock : stockKey ? toNum(row[stockKey])              : null,
+      upsell: upKey    ? String(row[upKey]||'').trim()     : '',
+    };
   }
 }
 
+/* ═══════════════════════════════════════════════
+   UPSELL INDEX (BFS connected components)
+═══════════════════════════════════════════════ */
 function buildUpsellIndex(priceRows) {
   state.upsellIndex = {};
   const edges = {};
-  const registerEdge = (fromSKU, toSKUs) => {
-    if (!edges[fromSKU]) edges[fromSKU] = new Set();
-    for (const t of toSKUs) {
-      if (t && t !== fromSKU) {
-        edges[fromSKU].add(t);
-        if (!edges[t]) edges[t] = new Set();
-        edges[t].add(fromSKU);
-      }
-    }
+  const add = (a, b) => {
+    if (!edges[a]) edges[a] = new Set();
+    if (!edges[b]) edges[b] = new Set();
+    edges[a].add(b); edges[b].add(a);
   };
+  const { upsellKey } = state._priceMeta;
+  const { codeKey }   = state._priceMeta;
+
   for (const row of priceRows) {
-    const nSKU  = normalizeSKU(findCol(row, ['sku','cikkszam','cikk','kod','code','item']) ?? '');
+    const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
-    const upStr = String(findCol(row, ['upsell','upsell_sku','kapcsolt','related']) ?? '').trim();
-    const upList = parseUpsellList(upStr);
-    if (upList.length) registerEdge(nSKU, upList);
+    const up = upsellKey ? String(row[upsellKey]||'').trim() : '';
+    parseUpsellList(up).forEach(u => add(nSKU, u));
   }
   for (const [nSKU, info] of Object.entries(state.stockMap)) {
-    if (info.upsell) {
-      const upList = parseUpsellList(info.upsell);
-      if (upList.length) registerEdge(nSKU, upList);
-    }
+    parseUpsellList(info.upsell).forEach(u => add(nSKU, u));
   }
+
   const visited = new Set();
-  const getComponent = (startSKU) => {
-    const comp = new Set();
-    const queue = [startSKU];
-    while (queue.length) {
-      const cur = queue.pop();
-      if (comp.has(cur)) continue;
-      comp.add(cur);
-      for (const nb of (edges[cur] || [])) {
-        if (!comp.has(nb)) queue.push(nb);
-      }
-    }
-    return comp;
-  };
   for (const sku of Object.keys(edges)) {
     if (visited.has(sku)) continue;
-    const comp = getComponent(sku);
-    for (const s of comp) { visited.add(s); state.upsellIndex[s] = comp; }
+    const comp = new Set();
+    const q = [sku];
+    while (q.length) {
+      const cur = q.pop();
+      if (comp.has(cur)) continue;
+      comp.add(cur);
+      (edges[cur]||new Set()).forEach(n => { if (!comp.has(n)) q.push(n); });
+    }
+    comp.forEach(s => { visited.add(s); state.upsellIndex[s] = comp; });
   }
 }
 
+/* ═══════════════════════════════════════════════
+   GET ARSOR GROUP FOR CUSTOMER
+═══════════════════════════════════════════════ */
 function getArsorGroup(customer) {
-  if (!customer) return null;
   for (const g of customer.groups) {
     if (g.toLowerCase().startsWith('arsor')) return g.toLowerCase();
   }
   return null;
 }
 
+/* ═══════════════════════════════════════════════
+   BUILD VISIBLE ROWS
+═══════════════════════════════════════════════ */
 function buildVisibleRows(arsor) {
+  const { codeKey, nameKey, upsellKey } = state._priceMeta;
   const priceRows = state.priceByArsor[arsor] || [];
-  const result = [];
+  state.visibleRows = [];
+
   for (const row of priceRows) {
-    const rawSKU = findCol(row, ['sku','cikkszam','cikk','kod','code','item']) ?? '';
-    const nSKU   = normalizeSKU(rawSKU);
+    const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
-    const name   = String(findCol(row, ['cikknev','nev','name','leiras','description','termek','cikknév']) ?? '').trim();
-    const price  = findCol(row, ['ar','ara','price','listaár','listaar','netto','brutto','egysegar','ár']);
-    const stockInfo  = state.stockMap[nSKU];
-    const upFromStock = stockInfo?.upsell ?? '';
-    const upFromPrice = String(findCol(row, ['upsell','upsell_sku','kapcsolt','related']) ?? '').trim();
-    const upsellStr  = upFromStock || upFromPrice;
-    result.push({
-      sku: nSKU, rawSKU, name, price,
-      size:       stockInfo?.size  ?? '–',
-      stock:      stockInfo?.stock ?? null,
-      upsellList: parseUpsellList(upsellStr),
+
+    // Price: explicit column or __priceKey marker
+    const priceColKey = row.__priceKey || arsor;
+    const price = row[priceColKey] ?? row[Object.keys(row).find(k=>k.toLowerCase()===arsor)] ?? '';
+
+    const info = state.stockMap[nSKU];
+    const upStock = info?.upsell || '';
+    const upPrice = upsellKey ? String(row[upsellKey]||'').trim() : '';
+
+    state.visibleRows.push({
+      sku       : nSKU,
+      name      : String(row[nameKey]||'').trim(),
+      price,
+      size      : info?.size  ?? '–',
+      stock     : info?.stock ?? null,
+      upsellList: parseUpsellList(upStock || upPrice),
     });
   }
-  state.visibleRows = result;
+
   buildUpsellIndex(priceRows);
 }
 
-/* ══════════════════════════════════════════════════════════
-   RENDER
-══════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   RENDER TABLE
+═══════════════════════════════════════════════ */
 function renderTable() {
   const container = document.getElementById('table-container');
   let rows = state.visibleRows;
+
   if (state.activeUpsellSKUs) rows = rows.filter(r => state.activeUpsellSKUs.has(r.sku));
   if (state.skuFilter) {
     const q = normalizeSKU(state.skuFilter);
     rows = rows.filter(r => r.sku.includes(q));
   }
+
   updateBadges(rows.length);
-  if (rows.length === 0) {
-    container.innerHTML = '<div id="empty-msg">Nincs találat a szűrési feltételeknek megfelelően.</div>';
+
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty">Nincs találat.</div>';
     return;
   }
-  const tBody = document.createElement('tbody');
+
+  const tbody = document.createElement('tbody');
   for (const r of rows) {
-    const outOfStock = (r.stock !== null && r.stock <= 0);
-    const stockDisp  = r.stock === null ? '–' : String(r.stock);
+    const oos  = r.stock !== null && r.stock <= 0;
     const upsellHTML = r.upsellList.length
-      ? r.upsellList.map(u => `<span class="upsell-link" data-upsell="${u}">${u}</span>`).join('')
-      : '–';
+      ? r.upsellList.map(u => `<span class="upsell-chip" data-upsell="${esc(u)}">${esc(u)}</span>`).join('')
+      : '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="sku-cell ${outOfStock ? 'out-of-stock' : ''}">${r.sku}</td>
-      <td class="name-cell">${escHtml(r.name)}</td>
-      <td>${escHtml(r.size)}</td>
-      <td class="stock-cell">${stockDisp}</td>
-      <td class="price-cell">${fmtPrice(r.price)}</td>
+      <td class="sku-cell${oos?' oos':''}">${esc(r.sku)}</td>
+      <td class="name-cell">${esc(r.name)}</td>
+      <td>${r.size && r.size!=='–' ? `<span class="size-badge">${esc(r.size)}</span>` : '—'}</td>
+      <td class="stock-val">${r.stock===null?'—':r.stock}</td>
+      <td><span class="price-val">${formatPrice(r.price)}</span></td>
       <td>${upsellHTML}</td>
-      <td><button class="btn-up" onclick="scrollToTop()">↑ Fel</button></td>
+      <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
     `;
-    tBody.appendChild(tr);
+    tbody.appendChild(tr);
   }
+
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
     <th>SKU</th><th>Cikknév</th><th>Méret</th>
     <th>Készleten</th><th>Ár</th><th>Upsell</th><th></th>
   </tr></thead>`;
-  table.appendChild(tBody);
+  table.appendChild(tbody);
+
   const wrap = document.createElement('div');
-  wrap.id = 'table-wrap';
+  wrap.className = 'table-wrap';
   wrap.appendChild(table);
+
   container.innerHTML = '';
   container.appendChild(wrap);
+
   wrap.addEventListener('click', e => {
-    const el = e.target.closest('.upsell-link');
-    if (!el) return;
-    applyUpsellFilter(normalizeSKU(el.dataset.upsell));
+    const chip = e.target.closest('.upsell-chip');
+    if (chip) applyUpsellFilter(normalizeSKU(chip.dataset.upsell));
   });
 }
 
+/* ═══════════════════════════════════════════════
+   UPSELL FILTER
+═══════════════════════════════════════════════ */
 function applyUpsellFilter(sku) {
   const comp = state.upsellIndex[sku];
   state.activeUpsellSKUs = (comp && comp.size) ? comp : new Set([sku]);
@@ -458,34 +558,40 @@ function applyUpsellFilter(sku) {
   renderTable();
 }
 
+/* ═══════════════════════════════════════════════
+   BADGES / INFO
+═══════════════════════════════════════════════ */
 function updateBadges(count) {
-  const row  = document.getElementById('badge-row');
-  const info = document.getElementById('info-row');
+  const row = document.getElementById('badge-row');
   row.innerHTML = '';
   const add = (label, val, cls='') => {
     const b = document.createElement('div');
     b.className = 'badge ' + cls;
-    b.innerHTML = label + ': <span>' + escHtml(val) + '</span>';
+    b.textContent = label + ': ' + val;
     row.appendChild(b);
   };
-  if (state.selectedCustomer) add('Vevő', state.selectedCustomer.name, 'accent-badge');
-  if (state.activeArsor)      add('Árlista', state.activeArsor, 'accent-badge');
-  if (state.activeUpsellSKUs) add('Upsell', state.activeUpsellSKUs.size + ' termék', 'upsell-badge');
-  if (state.skuFilter)        add('SKU kereső', state.skuFilter);
+  if (state.selectedCustomer) add('Vevő', state.selectedCustomer.name, 'ab');
+  if (state.activeArsor)      add('Árlista', state.activeArsor, 'ab');
+  if (state.activeUpsellSKUs) add('Upsell', state.activeUpsellSKUs.size + ' termék', 'ub');
+  if (state.skuFilter)        add('Kereső', state.skuFilter);
+  const info = document.createElement('div');
+  info.id = 'info-badge';
   info.textContent = count + ' termék';
+  row.appendChild(info);
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════
    CUSTOMER AUTOCOMPLETE
-══════════════════════════════════════════════════════════ */
+═══════════════════════════════════════════════ */
 function initCustomerAutocomplete() {
   const input = document.getElementById('customer-input');
   const dd    = document.getElementById('customer-dropdown');
-  let ddIdx   = -1;
+  let idx = -1;
+
   const show = items => {
-    dd.innerHTML = ''; ddIdx = -1;
+    dd.innerHTML = ''; idx = -1;
     if (!items.length) { dd.classList.remove('open'); return; }
-    items.forEach((c, i) => {
+    items.forEach(c => {
       const div = document.createElement('div');
       div.className = 'dd-item';
       div.textContent = c.name;
@@ -494,69 +600,75 @@ function initCustomerAutocomplete() {
     });
     dd.classList.add('open');
   };
+
   input.addEventListener('input', () => {
     const q = input.value.trim().toLowerCase();
-    show((q ? state.customers.filter(c => c.name.toLowerCase().includes(q)) : state.customers).slice(0,50));
+    show((q ? state.customers.filter(c=>c.name.toLowerCase().includes(q)) : state.customers).slice(0,60));
   });
-  input.addEventListener('focus', () => show(state.customers.slice(0,50)));
-  input.addEventListener('blur',  () => setTimeout(() => dd.classList.remove('open'), 150));
+  input.addEventListener('focus', () => show(state.customers.slice(0,60)));
+  input.addEventListener('blur',  () => setTimeout(()=>dd.classList.remove('open'), 160));
   input.addEventListener('keydown', e => {
     const items = dd.querySelectorAll('.dd-item');
-    if      (e.key==='ArrowDown') { ddIdx=Math.min(ddIdx+1,items.length-1); highlight(items); e.preventDefault(); }
-    else if (e.key==='ArrowUp')   { ddIdx=Math.max(ddIdx-1,0); highlight(items); e.preventDefault(); }
-    else if (e.key==='Enter' && ddIdx>=0) items[ddIdx]?.dispatchEvent(new MouseEvent('mousedown'));
+    if      (e.key==='ArrowDown') { idx=Math.min(idx+1,items.length-1); hl(items); e.preventDefault(); }
+    else if (e.key==='ArrowUp')   { idx=Math.max(idx-1,0); hl(items); e.preventDefault(); }
+    else if (e.key==='Enter' && idx>=0) items[idx]?.dispatchEvent(new MouseEvent('mousedown'));
     else if (e.key==='Escape') dd.classList.remove('open');
   });
-  const highlight = items => {
-    items.forEach((el,i) => el.classList.toggle('active', i===ddIdx));
-    items[ddIdx]?.scrollIntoView({block:'nearest'});
+  const hl = items => {
+    items.forEach((el,i)=>el.classList.toggle('active',i===idx));
+    items[idx]?.scrollIntoView({block:'nearest'});
   };
 }
 
-function selectCustomer(customer) {
-  state.selectedCustomer = customer;
+function selectCustomer(c) {
+  state.selectedCustomer = c;
   state.activeUpsellSKUs = null;
   state.skuFilter = '';
-  document.getElementById('customer-input').value = customer.name;
+  document.getElementById('customer-input').value = c.name;
   document.getElementById('sku-search').value = '';
   document.getElementById('btn-clear-upsell').style.display = 'none';
   document.getElementById('btn-clear-sku').style.display    = 'none';
-  const arsor = getArsorGroup(customer);
+
+  const arsor = getArsorGroup(c);
   state.activeArsor = arsor;
-  const tableEl = document.getElementById('table-container');
+
   if (!arsor) {
-    tableEl.innerHTML = '<div id="empty-msg">A vevőhöz nem tartozik <em>arsor…</em> csoport.</div>';
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">A vevőhöz nem tartozik <em>arsor…</em> csoport.<br>Csoportok: ' + esc(c.groups.join(', ') || '(üres)') + '</div>';
     updateBadges(0); return;
   }
   if (!state.priceByArsor[arsor]) {
-    tableEl.innerHTML = '<div id="empty-msg">Nincs árlista a(z) <em>' + arsor + '</em> csoporthoz.</div>';
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">Nincs árlista a(z) <strong>' + esc(arsor) + '</strong> csoporthoz.<br>Elérhető árlisták: ' + esc(Object.keys(state.priceByArsor).join(', ') || '(nincs)') + '</div>';
     updateBadges(0); return;
   }
+
   buildVisibleRows(arsor);
   renderTable();
 }
 
-function initSkuSearch() {
-  const input = document.getElementById('sku-search');
-  const btn   = document.getElementById('btn-clear-sku');
-  input.addEventListener('input', () => {
-    state.skuFilter = input.value.trim();
-    btn.style.display = state.skuFilter ? '' : 'none';
+/* ═══════════════════════════════════════════════
+   SKU SEARCH + CLEAR BUTTONS
+═══════════════════════════════════════════════ */
+function initControls() {
+  const skuInput = document.getElementById('sku-search');
+  const btnSku   = document.getElementById('btn-clear-sku');
+
+  skuInput.addEventListener('input', () => {
+    state.skuFilter = skuInput.value.trim();
+    btnSku.style.display = state.skuFilter ? '' : 'none';
     if (state.selectedCustomer && state.activeArsor) renderTable();
     else updateBadges(0);
   });
-}
 
-function initClearButtons() {
   document.getElementById('btn-clear-upsell').addEventListener('click', () => {
     state.activeUpsellSKUs = null;
     document.getElementById('btn-clear-upsell').style.display = 'none';
     renderTable();
   });
-  document.getElementById('btn-clear-sku').addEventListener('click', () => {
-    state.skuFilter = '';
-    document.getElementById('sku-search').value = '';
-    document.getElementById('btn-clear-sku').style.display = 'none';
+  btnSku.addEventListener('click', () => {
+    state.skuFilter = ''; skuInput.value = '';
+    btnSku.style.display = 'none';
     renderTable();
   });
   document.getElementById('btn-clear-all').addEventListener('click', () => {
@@ -568,134 +680,46 @@ function initClearButtons() {
     document.getElementById('btn-clear-sku').style.display    = 'none';
     document.getElementById('table-container').innerHTML = '';
     document.getElementById('badge-row').innerHTML = '';
-    document.getElementById('info-row').textContent = '—';
   });
 }
 
 function scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); }
 
-/* ══════════════════════════════════════════════════════════
-   PROCESS DATA (called after all 3 buffers are ready)
-══════════════════════════════════════════════════════════ */
-function processData(custBuf, priceBuf, stockBuf) {
-  const custRows  = parseExcelBuffer(custBuf);
-  const priceRows = parseExcelBuffer(priceBuf);
-  const stockRows = parseExcelBuffer(stockBuf);
-
-  parseCustomers(custRows);
-  parsePricelist(priceRows);
-  parseStockSize(stockRows);
-
-  // Hide upload panel, show topbar
-  document.getElementById('upload-panel').style.display = 'none';
-  document.getElementById('topbar').style.display = '';
-  document.getElementById('status').style.display  = 'none';
-
-  initCustomerAutocomplete();
-  initSkuSearch();
-  initClearButtons();
-
-  document.getElementById('table-container').innerHTML =
-    '<div id="empty-msg">Válassz vevőt a lista megjelenítéséhez.</div>';
-  document.getElementById('info-row').textContent = state.customers.length + ' vevő betöltve';
-}
-
-/* ══════════════════════════════════════════════════════════
-   FILE INPUT HANDLING
-══════════════════════════════════════════════════════════ */
-function setupFileInput(inputId, key, cardId, nameId) {
-  document.getElementById(inputId).addEventListener('change', async function() {
-    const file = this.files[0];
-    if (!file) return;
-    try {
-      fileData[key] = await readFileAsBuffer(file);
-      document.getElementById(nameId).textContent = '✓ ' + file.name;
-      document.getElementById(cardId).classList.add('loaded');
-    } catch(e) {
-      document.getElementById(nameId).textContent = '✗ Hiba: ' + e.message;
-    }
-    updateProcessButton();
-  });
-}
-
-function updateProcessButton() {
-  const ready = fileData.customers && fileData.pricelist && fileData.stocksize;
-  document.getElementById('btn-process').disabled = !ready;
-  if (ready) {
-    document.getElementById('btn-process').textContent = '▶ Betöltés és feldolgozás (mind a 3 fájl kész)';
-  }
-}
-
-/* ══════════════════════════════════════════════════════════
-   AUTO URL LOAD
-══════════════════════════════════════════════════════════ */
-async function autoLoadFromUrls() {
-  const prog = document.getElementById('load-progress');
-  const btn  = document.getElementById('btn-load-urls');
-  btn.disabled = true;
-  btn.textContent = '⏳ Betöltés…';
-
-  const keys   = ['customers','pricelist','stocksize'];
-  const labels = ['Vevőadatok','Árlista','Méret+Készlet'];
-  const bufs   = {};
-
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    prog.textContent = (i+1) + '/3 – ' + labels[i] + ' betöltése…';
-    try {
-      bufs[key] = await fetchBuffer(URLS[key]);
-      // Also update the upload card
-      document.getElementById('name-' + key).textContent = '✓ URL-ről betöltve';
-      document.getElementById('card-' + key).classList.add('loaded');
-    } catch(e) {
-      prog.innerHTML = '<span style="color:var(--danger)">✗ ' + labels[i] + ' nem töltható be URL-ről: ' + escHtml(e.message) + '<br>Töltsd le kézzel és válaszd ki a fájlt!</span>';
-      btn.disabled = false;
-      btn.textContent = '⚡ Automatikus betöltés URL-ről';
-      return;
-    }
-  }
-
-  prog.innerHTML = '<span style="color:var(--accent)">✓ Minden fájl betöltve! Feldolgozás…</span>';
+/* ═══════════════════════════════════════════════
+   BOOTSTRAP
+═══════════════════════════════════════════════ */
+async function init() {
   try {
-    processData(bufs.customers, bufs.pricelist, bufs.stocksize);
-  } catch(e) {
-    prog.innerHTML = '<span style="color:var(--danger)">✗ Feldolgozási hiba: ' + escHtml(e.message) + '</span>';
-    btn.disabled = false;
-    btn.textContent = '⚡ Automatikus betöltés URL-ről';
-  }
-}
-
-/* ══════════════════════════════════════════════════════════
-   INIT
-══════════════════════════════════════════════════════════ */
-setupFileInput('file-customers', 'customers', 'card-customers', 'name-customers');
-setupFileInput('file-pricelist', 'pricelist', 'card-pricelist', 'name-pricelist');
-setupFileInput('file-stocksize', 'stocksize', 'card-stocksize', 'name-stocksize');
-
-document.getElementById('btn-process').addEventListener('click', () => {
-  try {
-    processData(fileData.customers, fileData.pricelist, fileData.stocksize);
-  } catch(e) {
-    document.getElementById('load-progress').innerHTML =
-      '<span style="color:var(--danger)">✗ Hiba: ' + escHtml(e.message) + '</span>';
-  }
-});
-
-document.getElementById('btn-load-urls').addEventListener('click', autoLoadFromUrls);
-
-// Try auto-load on page open (silently, no error shown if it fails)
-(async () => {
-  try {
-    const [c, p, s] = await Promise.all([
-      fetchBuffer(URLS.customers),
-      fetchBuffer(URLS.pricelist),
-      fetchBuffer(URLS.stocksize),
+    const [custRows, priceRows, sizeRows] = await Promise.all([
+      fetchExcel(URL_CUSTOMERS),
+      fetchExcel(URL_PRICES),
+      fetchExcel(URL_SIZES),
     ]);
-    processData(c, p, s);
-  } catch(_) {
-    // CORS or other error – user will load manually
+
+    parseCustomers(custRows);
+    parsePricelist(priceRows);
+    parseStockSize(sizeRows);
+
+    document.getElementById('app-loading').style.display = 'none';
+    document.getElementById('app-main').style.display    = '';
+
+    initCustomerAutocomplete();
+    initControls();
+
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
+    updateBadges(0);
+
+  } catch(e) {
+    document.getElementById('app-loading').style.display = 'none';
+    const err = document.getElementById('app-error');
+    err.style.display = 'block';
+    err.textContent   = '⚠ Hiba: ' + e.message;
+    console.error(e);
   }
-})();
+}
+
+init();
 </script>
 </body>
 </html>
