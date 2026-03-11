@@ -802,13 +802,7 @@ if (window.ResizeObserver) {
   new ResizeObserver(fixStickyHeader).observe(document.querySelector('header') || document.body);
 }
 
-function updateHeaderHeight() {
-  const h = document.getElementById('main-header').offsetHeight;
-  document.documentElement.style.setProperty('--header-h', h + 'px');
-}
 
-// Update on load and resize
-window.addEventListener('resize', updateHeaderHeight);
 
 /* ═══════════════════════════════════════════════
    BOOTSTRAP
@@ -825,9 +819,10 @@ async function init() {
     parsePricelist(priceRows);
     parseStockSize(sizeRows);
 
+    document.getElementById('app-loading').style.display = 'none';
+    document.getElementById('app-main').style.display    = '';
 
-    // Measure real header height for sticky thead
-    setTimeout(updateHeaderHeight, 50);
+    setTimeout(fixStickyHeader, 50);
 
     initCustomerAutocomplete();
     initControls();
