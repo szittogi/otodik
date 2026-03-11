@@ -31,8 +31,6 @@
       background: var(--surface);
       flex-wrap: wrap;
     }
-    /* thead sticks below header - JS sets exact top value */
-    thead { position: sticky; z-index: 10; }
     header .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); white-space: nowrap; }
 
     /* header controls */
@@ -100,7 +98,7 @@
     /* table */
     .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    thead { position: sticky; top: var(--header-h, 110px); z-index: 10; }
+    thead { position: sticky; top: var(--header-h, 130px); z-index: 10; }
     thead tr { border-bottom: 2px solid var(--border); }
     th {
       padding: 12px 16px; text-align: left;
@@ -678,7 +676,7 @@ function renderTable() {
 
   container.innerHTML = '';
   container.appendChild(wrap);
-  requestAnimationFrame(fixStickyHeader);
+  fixStickyHeader();
 
   // Click: toggle upsell expand on chip click
   wrap.addEventListener('click', e => {
@@ -721,6 +719,8 @@ function updateBadges(count) {
   info.id = 'info-badge';
   info.textContent = count + ' termék';
   row.appendChild(info);
+  // Re-measure after badge row content changes header height
+  requestAnimationFrame(fixStickyHeader);
 }
 
 /* ═══════════════════════════════════════════════
@@ -788,7 +788,6 @@ function selectCustomer(c) {
 
   buildVisibleRows(arsor);
   renderTable();
-  requestAnimationFrame(fixStickyHeader);
 }
 
 /* ═══════════════════════════════════════════════
@@ -829,9 +828,12 @@ function fixStickyHeader() {
   const header = document.querySelector('header');
   if (!header) return;
   const h = Math.ceil(header.getBoundingClientRect().height);
-  document.querySelectorAll('thead').forEach(t => t.style.top = h + 'px');
+  document.documentElement.style.setProperty('--header-h', h + 'px');
 }
 window.addEventListener('resize', fixStickyHeader);
+if (window.ResizeObserver) {
+  new ResizeObserver(fixStickyHeader).observe(document.querySelector('header'));
+}
 
 
 
@@ -861,8 +863,6 @@ async function init() {
     document.getElementById('table-container').innerHTML =
       '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
     updateBadges(0);
-    requestAnimationFrame(fixStickyHeader);
-
   } catch(e) {
     document.getElementById('app-loading').style.display = 'none';
     const err = document.getElementById('app-error');
