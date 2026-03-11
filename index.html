@@ -1,632 +1,847 @@
 <!DOCTYPE html>
 <html lang="hu">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vevői Árlista</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vevőspecifikus Árlista</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
-  <!-- SheetJS CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --surface2: #1e2128;
+    --border: #2a2d35;
+    --border2: #363b47;
+    --accent: #e8c547;
+    --accent2: #f0d96a;
+    --text: #e2e4ea;
+    --text-muted: #7a8099;
+    --text-dim: #4a5068;
+    --green: #4ade80;
+    --red: #ff6b6b;
+    --red-dim: #7a2a2a;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  <style>
-    /* ───────── CSS VÁLTOZÓK ───────── */
-    :root {
-      --bg:        #0d0f14;
-      --surface:   #161921;
-      --card:      #1e2230;
-      --border:    #2a2f40;
-      --accent:    #e8c46a;
-      --accent2:   #5b8dee;
-      --text:      #e8ecf4;
-      --muted:     #7a82a0;
-      --upsell-bg: #12151e;
-      --radius:    10px;
-      --tr-hover:  #242840;
-    }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    min-height: 100vh;
+  }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  /* ── HEADER ── */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      padding: 0 0 60px;
-    }
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    margin-right: 8px;
+  }
 
-    /* ───────── HEADER ───────── */
-    header {
-      background: linear-gradient(135deg, #161921 0%, #0d1020 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 28px 40px 24px;
-      display: flex;
-      align-items: flex-end;
-      gap: 18px;
-    }
-    header h1 {
-      font-family: 'DM Serif Display', serif;
-      font-size: 2rem;
-      color: var(--accent);
-      letter-spacing: -0.5px;
-      line-height: 1;
-    }
-    header p {
-      font-size: 0.82rem;
-      color: var(--muted);
-      margin-bottom: 2px;
-    }
+  .logo span {
+    color: var(--text-muted);
+    font-weight: 400;
+  }
 
-    /* ───────── MAIN CONTAINER ───────── */
-    .container {
-      max-width: 1300px;
-      margin: 0 auto;
-      padding: 36px 24px 0;
-    }
+  .ctrl-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 200px;
+  }
 
-    /* ───────── VEVŐ VÁLASZTÓ KÁRTYA ───────── */
-    .selector-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px 32px;
-      margin-bottom: 32px;
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
-    .selector-card label {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-    }
-    .selector-card select {
-      flex: 1;
-      min-width: 260px;
-      background: var(--surface);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      padding: 11px 16px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 0.97rem;
-      appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a82a0' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .selector-card select:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-    .badge-group {
-      background: #1a1d2e;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 0.78rem;
-      color: var(--accent2);
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-    }
+  .ctrl-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
 
-    /* ───────── LOADING / ÁLLAPOT ───────── */
-    .state-box {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-    .state-box .spinner {
-      width: 38px; height: 38px;
-      border: 3px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 18px;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .state-box p { font-size: 0.92rem; }
+  select, input[type="text"] {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 7px 11px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    min-width: 0;
+    flex: 1;
+  }
 
-    /* ───────── TÁBLÁZAT ───────── */
-    .table-wrap {
-      overflow-x: auto;
-      border-radius: var(--radius);
-      border: 1px solid var(--border);
-      background: var(--card);
-    }
+  select:focus, input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(232,197,71,0.15);
+  }
 
-    .info-bar {
-      padding: 14px 22px;
-      font-size: 0.8rem;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .info-bar strong { color: var(--text); }
+  select option { background: var(--surface2); }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88rem;
-    }
-    thead tr {
-      background: #12151e;
-      border-bottom: 2px solid var(--border);
-    }
-    thead th {
-      padding: 13px 18px;
-      text-align: left;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      white-space: nowrap;
-    }
-    tbody tr.main-row {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-      cursor: default;
-    }
-    tbody tr.main-row:hover { background: var(--tr-hover); }
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: auto;
+    white-space: nowrap;
+  }
 
-    tbody td {
-      padding: 13px 18px;
-      vertical-align: middle;
-    }
+  .status-bar .hl { color: var(--accent); font-weight: 600; }
 
-    .sku-cell {
-      font-family: 'DM Sans', monospace;
-      font-size: 0.8rem;
-      color: var(--accent2);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    .name-cell {
-      max-width: 280px;
-      line-height: 1.45;
-    }
-    .size-cell {
-      font-size: 0.78rem;
-      color: var(--muted);
-      max-width: 200px;
-    }
-    .price-cell {
-      white-space: nowrap;
-      font-weight: 500;
-      text-align: right;
-    }
-    .price-net  { color: #a8d4a8; }
-    .price-brut { color: var(--text); }
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 
-    /* ───────── UPSELL CHIP-EK ───────── */
-    .upsell-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .chip {
-      background: #1c2035;
-      border: 1px solid var(--border);
-      border-radius: 5px;
-      padding: 3px 9px;
-      font-size: 0.74rem;
-      color: var(--accent);
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s;
-      font-family: monospace;
-    }
-    .chip:hover {
-      background: #252b42;
-      border-color: var(--accent);
-    }
-    .chip.active {
-      background: #2a2412;
-      border-color: var(--accent);
-      color: #f5d98a;
-    }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.12s;
+    user-select: none;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active { background: rgba(232,197,71,0.12); border-color: var(--accent); color: var(--accent2); }
+  .chip .close { font-size: 13px; line-height: 1; color: var(--text-dim); }
+  .chip.active .close { color: var(--accent); }
 
-    /* ───────── UPSELL SOROK ───────── */
-    tr.upsell-row {
-      background: var(--upsell-bg);
-      border-bottom: 1px solid #1c1f2c;
-    }
-    tr.upsell-row td {
-      padding: 0;
-    }
-    .upsell-inner {
-      padding: 0 18px 14px 36px;
-    }
-    .upsell-title {
-      font-size: 0.7rem;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      padding: 10px 0 8px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .upsell-title::before {
-      content: '';
-      display: inline-block;
-      width: 22px;
-      height: 1px;
-      background: var(--accent);
-      opacity: 0.5;
-    }
-    .upsell-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
-    .upsell-table tr {
-      border-bottom: 1px solid #1e2230;
-    }
-    .upsell-table tr:last-child { border-bottom: none; }
-    .upsell-table td {
-      padding: 8px 14px 8px 0;
-      vertical-align: middle;
-    }
-    .upsell-table .sku-cell { color: #8aafdd; }
+  .filter-label {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 
-    /* ───────── RESZPONZÍV ───────── */
-    @media (max-width: 640px) {
-      header { padding: 20px 18px 18px; }
-      header h1 { font-size: 1.4rem; }
-      .container { padding: 20px 12px 0; }
-      .selector-card { padding: 20px 16px; }
-      thead th, tbody td { padding: 10px 10px; }
-    }
-  </style>
+  /* ── TABLE ── */
+  .table-wrap {
+    padding: 0 24px 40px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  thead {
+    position: sticky;
+    top: 57px;
+    z-index: 50;
+  }
+
+  thead tr {
+    background: var(--surface);
+    border-bottom: 2px solid var(--border2);
+  }
+
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding: 10px 12px;
+    text-align: left;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  th:first-child { width: 120px; }
+  th:nth-child(2) { width: auto; min-width: 200px; }
+  th:nth-child(3) { width: 80px; }
+  th:nth-child(4) { width: 90px; }
+  th:nth-child(5) { width: 100px; text-align: right; }
+  th:nth-child(6) { width: 180px; }
+  th:nth-child(7) { width: 50px; text-align: center; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--surface); }
+  tbody tr:hover td { color: var(--text); }
+
+  td {
+    padding: 9px 12px;
+    color: #c5c8d6;
+    vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .sku-cell {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.04em;
+  }
+  .sku-cell.out-of-stock { color: var(--red); }
+
+  .name-cell {
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .size-cell {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .stock-cell {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-align: right;
+  }
+  .stock-zero { color: var(--red); }
+  .stock-ok { color: var(--green); }
+  .stock-dash { color: var(--text-dim); }
+
+  .price-cell {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+    text-align: right;
+    letter-spacing: 0.02em;
+  }
+  .price-dash { color: var(--text-dim); font-weight: 400; }
+
+  .upsell-cell {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .upsell-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(232,197,71,0.08);
+    border: 1px solid rgba(232,197,71,0.25);
+    color: #c9ab3a;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .upsell-tag:hover {
+    background: rgba(232,197,71,0.2);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+
+  .btn-up {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text-muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+    transition: all 0.12s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .btn-up:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── STATES ── */
+  .state-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 80px 24px;
+    text-align: center;
+  }
+
+  .state-icon {
+    font-size: 40px;
+    opacity: 0.25;
+  }
+
+  .state-title {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .state-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    max-width: 340px;
+  }
+
+  /* ── LOADING ── */
+  .loader {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-bar {
+    width: 220px;
+    height: 3px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .header { padding: 10px 14px; gap: 10px; }
+    .table-wrap { padding: 0 8px 40px; }
+    td, th { padding: 8px 7px; }
+    th:nth-child(2) { min-width: 140px; }
+    .logo { display: none; }
+  }
+</style>
 </head>
 <body>
 
-<header>
-  <div>
-    <p>Vevői</p>
-    <h1>Árlista</h1>
-  </div>
-</header>
+<!-- HEADER -->
+<div class="header" id="top">
+  <div class="logo">Árlista<span>·sys</span></div>
 
-<div class="container">
-
-  <!-- Vevő kiválasztó -->
-  <div class="selector-card">
-    <label for="customerSelect">Vevő kiválasztása</label>
+  <div class="ctrl-group" style="max-width:280px;">
+    <span class="ctrl-label">Vevő</span>
     <select id="customerSelect">
-      <option value="">— Adatok betöltése... —</option>
+      <option value="">— Betöltés… —</option>
     </select>
-    <span class="badge-group" id="groupBadge" style="display:none"></span>
   </div>
 
-  <!-- Tartalom -->
-  <div id="content">
-    <div class="state-box">
-      <div class="spinner"></div>
-      <p>Adatforrások betöltése…</p>
-    </div>
+  <div class="ctrl-group" style="max-width:260px;">
+    <span class="ctrl-label">Cikkszám</span>
+    <input type="text" id="skuSearch" placeholder="Keresés…" autocomplete="off" spellcheck="false">
   </div>
 
+  <div class="status-bar" id="statusBar">
+    <span id="loadStatus">Adatok betöltése…</span>
+  </div>
+</div>
+
+<!-- FILTER BAR (upsell active) -->
+<div class="filter-bar" id="filterBar" style="display:none;">
+  <span class="filter-label">Szűrő:</span>
+  <span class="chip active" id="upsellChip">
+    Upsell csoport: <strong id="upsellChipLabel"></strong>
+    <span class="close" id="clearUpsell">✕</span>
+  </span>
+</div>
+
+<!-- CONTENT -->
+<div class="table-wrap" id="contentArea">
+  <div class="state-box" id="stateBox">
+    <div class="loader"></div>
+    <div class="state-title">Adatok betöltése</div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="state-sub" id="stateMsg">Kapcsolódás az adatforrásokhoz…</div>
+  </div>
+  <table id="priceTable" style="display:none;">
+    <thead>
+      <tr>
+        <th>SKU</th>
+        <th>Cikknév</th>
+        <th>Méret</th>
+        <th style="text-align:right;">Készleten</th>
+        <th style="text-align:right;">Ár</th>
+        <th>Upsell</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  ADATFORRÁS URL-EK
-// ═══════════════════════════════════════════════════════════════
-const URL_CUSTOMERS  = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzUy1oUFRzU19VVU5vSGxkUGZrS3VOandRYWE5UU9iQm9JZUEtcFRxTF8yMHpzQmcweGJ3VjRKX0piVGc3Nmk0QWNTUXlVclA2eGFvY3phZ0REQjZXYkMyYkVWeVBlczlxRHJEREx0Ni1BV21tdEE9';
-const URL_PRICELIST  = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVEF5SjZpdXZpaE01MEtiMDlGN001cFdkUU9IZkNkSkF5MXk3Z182MjdmbEVxRmxYdG9sRDdjNzMzdzZhSkItaEl6ZUFJMEdnZjNlNDc0d0piUjRwREwzbGktRlR4VGYxSUE2N3FDaW55RjJEY1U9';
-const URL_PRODUCTS   = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVEMtTThCbWlNZW1JaDMxNzE2WHQwTEFCUElNUVJJZEtXU181cVpQd0g2YkdDYngxazBuelBVWFFOb0VuSWpSLWo5T0w3ZGpyQVc2NFU3WERNXzVEeXpmc1BIOVB2anBwVF9CMXRTSk9QVUR0VVk9';
+// ═══════════════════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════════════════
+const URLS = {
+  customers: 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX1NMTmlManAzeV9WMy03a0ZaZE5WRF9TTWF2QjBjT1pfeWhmV1NPbl9IV080bHZmbEJPZm1xWUticWdwM1pfV0s5X0ZDUUx4ZmR6QTJaOTVmbm51d2RSeVN6VFdEVlhsMGstb0ZVbUxuWC10VFk9',
+  prices:    'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX1ExZkFLeWtTWlJybUFDUDY1QkVwc2pHeE5zVW1qSUJlTjdHcUlwLWkyVXhudmYzRHQ5aEk2Zk9yLWNKMWRfNU9HYmh0VklTdlcwdGZfN0RHbmFfMlpLY2xMbzk2elFyM2Y0eDNNdkpFcW1rLVU9',
+  stock:     'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX1NMTmlManAzeV9WMy03a0ZaZE5WRF9TTWF2QjBjT1pfeWhmV1NPbl9IV080bHZmbEJPZm1xWUticWdwM1pfV0s1X0ZDUUx4ZmR6QTJaOTVmbm51d2RSeVN6VFdEVlhsMGstb0ZVbUxuWC10VFk9'
+};
 
-// Globális adattárak
-let customers  = [];   // [{name, group}]
-let priceRows  = [];   // [{sku, pricelist, name, netPrice, grossPrice}]
-let productMap = {};   // sku (kisbetű) → {name, size, upsell}
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+let rawCustomers = [];   // [{name, groups:[]}]
+let rawPrices    = {};   // { arsorKey: [{sku, name, price, upsell}] }
+let stockMap     = {};   // { normalizedSku: [{size, stock}] }
+let skuIndex     = {};   // { normalizedSku: priceRow }
 
-// Nyitott upsell sorok nyilvántartása: mainRowId → Set(sku)
-const openUpsells = {};
+let currentCustomer = null;
+let currentArsor    = null;
+let currentRows     = [];   // filtered display rows
+let upsellFilter    = null; // Set of normalized SKUs or null
+let searchQuery     = '';
 
-// ═══════════════════════════════════════════════════════════════
-//  XLSX LETÖLTÉS ÉS FELDOLGOZÁS
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Letölti és XLS(X) fájllá alakítja, visszaadja a munkalapot JSON-ként.
- */
-async function fetchXlsx(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
-  const buf  = await resp.arrayBuffer();
-  const wb   = XLSX.read(buf, { type: 'array' });
-  const ws   = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: '' });
+// ═══════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════
+function normalizeSKU(sku) {
+  if (!sku) return '';
+  return String(sku).toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
-// ───────── VEVŐK betöltése ─────────
-function loadCustomers(rows) {
-  customers = rows.map(r => ({
-    name:  String(r['Név'] || '').trim(),
-    group: String(r['Csoportok'] || '').trim()
-  })).filter(c => c.name);
+function setProgress(pct, msg) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  if (msg) document.getElementById('stateMsg').textContent = msg;
 }
 
-// ───────── ÁRLISTA betöltése ─────────
-function loadPricelist(rows) {
-  priceRows = rows.map(r => ({
-    sku:        String(r['cikkszám'] || '').trim().toLowerCase(),
-    pricelist:  String(r['Árlista']  || '').trim(),
-    name:       String(r['Név']      || '').trim(),
-    netPrice:   parsePrice(r['Nettó ár']),
-    grossPrice: parsePrice(r['Bruttó ár'])
-  })).filter(r => r.sku);
+function setStatus(html) {
+  document.getElementById('loadStatus').innerHTML = html;
 }
 
-// ───────── TERMÉKADATOK betöltése ─────────
-function loadProducts(rows) {
-  productMap = {};
-  rows.forEach(r => {
-    const sku = String(r['Cikkszám (sku)'] || '').trim().toLowerCase();
-    if (!sku) return;
-    productMap[sku] = {
-      name:   String(r['Név']              || '').trim(),
-      size:   String(r['Méretértékek']     || '').trim(),
-      upsell: String(r['upsell termékek']  || '').trim()
-    };
-  });
+function showState(icon, title, sub) {
+  const sb = document.getElementById('stateBox');
+  sb.style.display = 'flex';
+  sb.innerHTML = `<div class="state-icon">${icon}</div>
+    <div class="state-title">${title}</div>
+    <div class="state-sub">${sub}</div>`;
+  document.getElementById('priceTable').style.display = 'none';
 }
 
-// ─── Ár stringből szám ───
-function parsePrice(val) {
-  if (val === '' || val === null || val === undefined) return null;
-  // Kezel "1 230,5" és "1230.5" formátumokat is
-  const s = String(val).replace(/\s/g, '').replace(',', '.');
-  const n = parseFloat(s);
-  return isNaN(n) ? null : Math.round(n);
+function fetchXlsx(url) {
+  return fetch(url)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.arrayBuffer();
+    })
+    .then(buf => {
+      const wb = XLSX.read(buf, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      return XLSX.utils.sheet_to_json(ws, { defval: '' });
+    });
 }
 
-// ─── Ft formázás ───
-function formatFt(n) {
-  if (n === null || n === undefined) return '—';
-  return n.toLocaleString('hu-HU') + ' Ft';
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  INIT: MINDEN ADAT BETÖLTÉSE
-// ═══════════════════════════════════════════════════════════════
-async function init() {
+// ═══════════════════════════════════════════════════════
+//  LOAD DATA
+// ═══════════════════════════════════════════════════════
+async function loadAll() {
   try {
-    const [custRows, priceListRows, prodRows] = await Promise.all([
-      fetchXlsx(URL_CUSTOMERS),
-      fetchXlsx(URL_PRICELIST),
-      fetchXlsx(URL_PRODUCTS)
-    ]);
-
-    loadCustomers(custRows);
-    loadPricelist(priceListRows);
-    loadProducts(prodRows);
-
-    populateSelect();
-    renderContent('');  // üres állapot
-
-  } catch (err) {
-    document.getElementById('content').innerHTML = `
-      <div class="state-box">
-        <p style="color:#e87a7a">⚠ Hiba a betöltés során:<br><code>${err.message}</code></p>
-      </div>`;
-    console.error(err);
+    setProgress(5, 'Vevő adatbázis letöltése…');
+    const custRaw = await fetchXlsx(URLS.customers);
+    setProgress(35, 'Árlista letöltése…');
+    const priceRaw = await fetchXlsx(URLS.prices);
+    setProgress(65, 'Készlet adatok letöltése…');
+    let stockRaw = [];
+    try {
+      stockRaw = await fetchXlsx(URLS.stock);
+    } catch(e) {
+      console.warn('Készlet betöltés sikertelen:', e);
+    }
+    setProgress(85, 'Feldolgozás…');
+    processData(custRaw, priceRaw, stockRaw);
+    setProgress(100, 'Kész');
+    buildCustomerSelect();
+    setStatus('<span class="hl">✓</span> Adatok betöltve');
+  } catch(e) {
+    console.error(e);
+    setStatus('⚠ Betöltési hiba');
+    showState('⚠', 'Betöltési hiba', 'Nem sikerült az adatforráshoz kapcsolódni. Ellenőrizze a hálózatot és a CORS beállításokat.<br><small style="opacity:.5">' + e.message + '</small>');
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  LEGÖRDÜLŐ MENÜ FELTÖLTÉSE
-// ═══════════════════════════════════════════════════════════════
-function populateSelect() {
+// ═══════════════════════════════════════════════════════
+//  PROCESS
+// ═══════════════════════════════════════════════════════
+function processData(custRaw, priceRaw, stockRaw) {
+  // ── Customers ──
+  // Expected columns: something like "Vevő neve", "Csoport" or "Csoportok"
+  // We'll auto-detect
+  rawCustomers = [];
+  if (custRaw.length) {
+    const keys = Object.keys(custRaw[0]);
+    // Find name column (first col likely)
+    const nameKey = keys[0];
+    // Find group column (look for csoport/group/groups)
+    const groupKey = keys.find(k =>
+      /csoport|group|tag|kategor/i.test(k)
+    ) || keys[1];
+
+    custRaw.forEach(row => {
+      const name = String(row[nameKey] || '').trim();
+      if (!name) return;
+      // Groups may be comma or semicolon separated, or multiple columns
+      let groups = [];
+      if (groupKey && row[groupKey]) {
+        groups = String(row[groupKey])
+          .split(/[,;|\/\n]+/)
+          .map(g => g.trim())
+          .filter(Boolean);
+      }
+      // Also scan all columns for group-like values
+      keys.forEach(k => {
+        if (k === nameKey) return;
+        const v = String(row[k] || '').trim();
+        if (v && !groups.includes(v)) groups.push(v);
+      });
+      rawCustomers.push({ name, groups });
+    });
+  }
+
+  // ── Prices ──
+  // Expected: SKU, Cikknév, [arsor columns], Upsell
+  rawPrices = {};
+  if (priceRaw.length) {
+    const keys = Object.keys(priceRaw[0]);
+    const skuKey  = keys.find(k => /^sku$/i.test(k.trim())) || keys[0];
+    const nameKey = keys.find(k => /név|name|cikk|megnevez/i.test(k)) || keys[1];
+    const upsellKey = keys.find(k => /upsell/i.test(k));
+    // arsor columns
+    const arsorKeys = keys.filter(k => /^arsor/i.test(k.trim()));
+
+    // Build price map per arsor
+    arsorKeys.forEach(ak => { rawPrices[ak.trim().toLowerCase()] = []; });
+
+    priceRaw.forEach(row => {
+      const rawSku = row[skuKey];
+      const sku = normalizeSKU(rawSku);
+      if (!sku) return;
+      const cikkNev = String(row[nameKey] || '').trim();
+      const upsellRaw = upsellKey ? String(row[upsellKey] || '').trim() : '';
+      // Parse upsell SKU list
+      const upsellSkus = upsellRaw
+        ? upsellRaw.split(/[,;]+/).map(s => normalizeSKU(s)).filter(Boolean)
+        : [];
+
+      arsorKeys.forEach(ak => {
+        const arsorNorm = ak.trim().toLowerCase();
+        const price = row[ak];
+        rawPrices[arsorNorm].push({
+          sku,
+          cikkNev,
+          price: price !== '' && price !== undefined ? price : null,
+          upsellSkus
+        });
+      });
+    });
+
+    // Build skuIndex from first arsor (or all)
+    skuIndex = {};
+    (rawPrices[arsorKeys[0]?.trim().toLowerCase()] || []).forEach(r => {
+      skuIndex[r.sku] = r;
+    });
+  }
+
+  // ── Stock ──
+  stockMap = {};
+  if (stockRaw.length) {
+    const keys = Object.keys(stockRaw[0]);
+    const skuKey   = keys.find(k => /^sku$/i.test(k.trim())) || keys[0];
+    const sizeKey  = keys.find(k => /méret|size/i.test(k)) || keys[1];
+    const stockKey = keys.find(k => /készlet|stock|qty|menny/i.test(k)) || keys[2];
+
+    stockRaw.forEach(row => {
+      const sku = normalizeSKU(row[skuKey]);
+      if (!sku) return;
+      if (!stockMap[sku]) stockMap[sku] = [];
+      stockMap[sku].push({
+        size: String(row[sizeKey] || '').trim() || '-',
+        stock: row[stockKey] !== '' ? Number(row[stockKey]) : null
+      });
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  CUSTOMER SELECT
+// ═══════════════════════════════════════════════════════
+function buildCustomerSelect() {
   const sel = document.getElementById('customerSelect');
-  sel.innerHTML = '<option value="">— Válassz vevőt —</option>';
-  customers.forEach((c, i) => {
+  sel.innerHTML = '<option value="">— Válasszon vevőt —</option>';
+
+  const sorted = [...rawCustomers].sort((a,b) => a.name.localeCompare(b.name, 'hu'));
+  sorted.forEach((c, i) => {
     const opt = document.createElement('option');
-    opt.value = i;
+    opt.value = c.name;
     opt.textContent = c.name;
     sel.appendChild(opt);
   });
-  sel.addEventListener('change', onCustomerChange);
-}
 
-function onCustomerChange(e) {
-  const idx = e.target.value;
-  if (idx === '') {
-    document.getElementById('groupBadge').style.display = 'none';
-    renderContent('');
-    return;
-  }
-  const customer = customers[parseInt(idx)];
-  // Ha üres a csoport → alapértelmezett
-  const group = customer.group || 'arsor11_webshop';
-
-  const badge = document.getElementById('groupBadge');
-  badge.textContent = group;
-  badge.style.display = '';
-
-  renderContent(group);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  ÁRLISTA MEGJELENÍTÉSE
-// ═══════════════════════════════════════════════════════════════
-function renderContent(group) {
-  const content = document.getElementById('content');
-
-  if (!group) {
-    content.innerHTML = `<div class="state-box"><p>Válassz vevőt a legördülő menüből.</p></div>`;
-    return;
-  }
-
-  // Szűrés: csak a kiválasztott csoporthoz tartozó sorok
-  const filtered = priceRows.filter(r => r.pricelist === group);
-
-  if (filtered.length === 0) {
-    content.innerHTML = `<div class="state-box"><p>Ehhez a csoporthoz (<strong>${group}</strong>) nem található árlista adat.</p></div>`;
-    return;
-  }
-
-  // Táblázat felépítése
-  let rows = '';
-  filtered.forEach((item, idx) => {
-    const prod   = productMap[item.sku] || { name: '', size: '', upsell: '' };
-    const name   = item.name || prod.name || '—';
-    const size   = prod.size;
-    const upsellSkus = parseUpsellSkus(prod.upsell);
-
-    // Upsell chipek
-    let chipsHtml = '';
-    if (upsellSkus.length > 0) {
-      chipsHtml = `<div class="upsell-chips">` +
-        upsellSkus.map(s =>
-          `<span class="chip" data-row="${idx}" data-sku="${s}" onclick="toggleUpsell(this, '${group}')">${s}</span>`
-        ).join('') +
-        `</div>`;
-    }
-
-    rows += `
-      <tr class="main-row" id="main-${idx}">
-        <td class="sku-cell">${escHtml(item.sku.toUpperCase())}</td>
-        <td class="name-cell">${escHtml(name)}</td>
-        <td class="size-cell">${escHtml(size)}</td>
-        <td class="price-cell price-net">${formatFt(item.netPrice)}</td>
-        <td class="price-cell price-brut">${formatFt(item.grossPrice)}</td>
-        <td>${chipsHtml}</td>
-      </tr>
-      <tr class="upsell-row" id="upsell-row-${idx}" style="display:none">
-        <td colspan="6">
-          <div class="upsell-inner" id="upsell-inner-${idx}"></div>
-        </td>
-      </tr>`;
-  });
-
-  content.innerHTML = `
-    <div class="table-wrap">
-      <div class="info-bar">
-        <strong>${filtered.length}</strong> termék az árlistában &nbsp;·&nbsp; Csoport: <strong>${escHtml(group)}</strong>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Cikkszám</th>
-            <th>Termék neve</th>
-            <th>Méret</th>
-            <th style="text-align:right">Nettó ár</th>
-            <th style="text-align:right">Bruttó ár</th>
-            <th>Upsell</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>`;
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UPSELL TOGGLE
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * Upsell cikkszám chipre kattintáskor:
- * - ha nyitva van → bezárja
- * - ha zárva van → megnyitja és megjeleníti az upsell sort
- */
-function toggleUpsell(chipEl, group) {
-  const rowIdx  = chipEl.dataset.row;
-  const sku     = chipEl.dataset.sku.toLowerCase();
-  const upsellRow   = document.getElementById(`upsell-row-${rowIdx}`);
-  const upsellInner = document.getElementById(`upsell-inner-${rowIdx}`);
-
-  if (!openUpsells[rowIdx]) openUpsells[rowIdx] = new Set();
-  const set = openUpsells[rowIdx];
-
-  if (set.has(sku)) {
-    // bezárás
-    set.delete(sku);
-    chipEl.classList.remove('active');
+  if (rawCustomers.length === 0) {
+    showState('👤', 'Nincs vevő adat', 'A vevő adatbázis üres vagy nem sikerült feldolgozni.');
   } else {
-    // megnyitás
-    set.add(sku);
-    chipEl.classList.add('active');
+    showState('👤', 'Válasszon vevőt', 'A felső legördülő menüből válassza ki a vevőt az árlista megjelenítéséhez.');
   }
+  setStatus(`<span class="hl">${rawCustomers.length}</span> vevő betöltve`);
+}
 
-  if (set.size === 0) {
-    upsellRow.style.display = 'none';
-    upsellInner.innerHTML = '';
+function onCustomerChange() {
+  const name = document.getElementById('customerSelect').value;
+  upsellFilter = null;
+  document.getElementById('filterBar').style.display = 'none';
+  document.getElementById('skuSearch').value = '';
+  searchQuery = '';
+
+  if (!name) {
+    showState('👤', 'Válasszon vevőt', 'A felső legördülő menüből válassza ki a vevőt.');
     return;
   }
 
-  // Upsell termékek megjelenítése
-  upsellRow.style.display = '';
-  renderUpsellContent(upsellInner, [...set], group);
+  currentCustomer = rawCustomers.find(c => c.name === name);
+  if (!currentCustomer) return;
+
+  // Find arsor group
+  const arsorGroups = currentCustomer.groups
+    .filter(g => /^arsor/i.test(g));
+
+  if (arsorGroups.length === 0) {
+    showState('🔍', 'Nincs árlista', `A(z) "${name}" vevőhöz nem tartozik "arsor" csoport.`);
+    currentArsor = null;
+    return;
+  }
+
+  // First arsor group
+  currentArsor = arsorGroups[0].trim().toLowerCase();
+
+  if (!rawPrices[currentArsor] || rawPrices[currentArsor].length === 0) {
+    showState('📋', 'Üres árlista', `Az "${currentArsor}" árlistán nincs termék.`);
+    return;
+  }
+
+  renderTable();
 }
 
-function renderUpsellContent(container, skus, group) {
-  let html = `<div class="upsell-title">Upsell termékek</div>
-    <table class="upsell-table">`;
+// ═══════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════
+function getFilteredRows() {
+  if (!currentArsor || !rawPrices[currentArsor]) return [];
+  let rows = rawPrices[currentArsor];
 
-  skus.forEach(sku => {
-    // Termék adatok
-    const prod  = productMap[sku] || null;
-    // Ár megkeresése a csoporthoz
-    const price = priceRows.find(r => r.sku === sku && r.pricelist === group);
+  // Upsell filter
+  if (upsellFilter) {
+    rows = rows.filter(r => upsellFilter.has(r.sku));
+  }
 
-    if (!price && !prod) return; // ha sehol nincs → kihagyja
+  // Search filter
+  if (searchQuery) {
+    const q = normalizeSKU(searchQuery);
+    rows = rows.filter(r => r.sku.includes(q) || normalizeSKU(r.cikkNev).includes(q));
+  }
 
-    const name  = (price && price.name) || (prod && prod.name) || '—';
-    const size  = prod ? prod.size : '';
+  return rows;
+}
 
-    html += `
-      <tr>
-        <td class="sku-cell">${escHtml(sku.toUpperCase())}</td>
-        <td class="name-cell">${escHtml(name)}</td>
-        <td class="size-cell">${escHtml(size)}</td>
-        <td class="price-cell price-net" style="text-align:right">${price ? formatFt(price.netPrice)   : '—'}</td>
-        <td class="price-cell price-brut" style="text-align:right">${price ? formatFt(price.grossPrice) : '—'}</td>
-      </tr>`;
+function formatPrice(p) {
+  if (p === null || p === undefined || p === '') return '<span class="price-dash">—</span>';
+  const n = typeof p === 'number' ? p : parseFloat(String(p).replace(/[^0-9.,]/g,'').replace(',','.'));
+  if (isNaN(n)) return '<span class="price-dash">—</span>';
+  return n.toLocaleString('hu-HU') + ' Ft';
+}
+
+function renderTable() {
+  const rows = getFilteredRows();
+  currentRows = rows;
+
+  if (rows.length === 0) {
+    showState('🔎', 'Nincs találat', 'Módosítsa a keresési feltételeket.');
+    document.getElementById('priceTable').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('stateBox').style.display = 'none';
+  const table = document.getElementById('priceTable');
+  table.style.display = 'table';
+
+  const tbody = document.getElementById('tableBody');
+
+  // Build HTML string for performance
+  const parts = [];
+  rows.forEach(row => {
+    const stockEntries = stockMap[row.sku] || [];
+
+    if (stockEntries.length === 0) {
+      parts.push(buildRow(row, '-', null));
+    } else {
+      stockEntries.forEach((se, idx) => {
+        parts.push(buildRow(row, se.size, se.stock, idx > 0));
+      });
+    }
   });
 
-  html += '</table>';
-  container.innerHTML = html;
+  tbody.innerHTML = parts.join('');
+
+  // Status
+  setStatus(`<span class="hl">${rows.length}</span> termék · ${currentArsor}`);
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  SEGÉDFÜGGVÉNYEK
-// ═══════════════════════════════════════════════════════════════
+function buildRow(row, size, stock, continuation) {
+  const isOOS = stock !== null && stock === 0;
+  const skuClass = 'sku-cell' + (isOOS ? ' out-of-stock' : '');
 
-/** Upsell stringből tömb: "100BA1823, 200XY; 300ZZ" → ['100ba1823', '200xy', '300zz'] */
-function parseUpsellSkus(str) {
-  if (!str) return [];
-  return str.split(/[,;]+/).map(s => s.trim().toLowerCase()).filter(Boolean);
+  let stockHtml;
+  if (stock === null) {
+    stockHtml = '<span class="stock-dash">—</span>';
+  } else if (stock === 0) {
+    stockHtml = `<span class="stock-zero">${stock}</span>`;
+  } else {
+    stockHtml = `<span class="stock-ok">${stock}</span>`;
+  }
+
+  const priceHtml = continuation ? '' : formatPrice(row.price);
+  const nameHtml  = continuation ? '' : escHtml(row.cikkNev);
+  const skuHtml   = continuation ? '' : `<span class="${skuClass}">${escHtml(row.sku)}</span>`;
+
+  let upsellHtml = '';
+  if (!continuation && row.upsellSkus && row.upsellSkus.length) {
+    upsellHtml = row.upsellSkus
+      .map(u => `<a class="upsell-tag" href="#" data-upsell="${escAttr(u)}">${escHtml(u)}</a>`)
+      .join('');
+  }
+
+  return `<tr>
+    <td class="sku-cell">${skuHtml}</td>
+    <td class="name-cell">${nameHtml}</td>
+    <td class="size-cell">${escHtml(size)}</td>
+    <td class="stock-cell" style="text-align:right;">${stockHtml}</td>
+    <td class="price-cell">${priceHtml}</td>
+    <td class="upsell-cell">${upsellHtml}</td>
+    <td><button class="btn-up" onclick="scrollTop()">↑</button></td>
+  </tr>`;
 }
 
-/** XSS elleni HTML escape */
 function escHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+function escAttr(s) { return escHtml(s); }
+
+// ═══════════════════════════════════════════════════════
+//  UPSELL FILTER
+// ═══════════════════════════════════════════════════════
+function applyUpsellFilter(clickedSku) {
+  if (!currentArsor) return;
+  const rows = rawPrices[currentArsor];
+
+  // Find what upsell group this SKU belongs to
+  // The group is defined by the clicked SKU's own upsell list,
+  // but we also need to find all rows that share that list
+  const clickedRow = rows.find(r => r.sku === clickedSku);
+  if (!clickedRow || !clickedRow.upsellSkus.length) return;
+
+  // Build the group: all SKUs in clickedRow.upsellSkus
+  const groupSet = new Set(clickedRow.upsellSkus);
+
+  upsellFilter = groupSet;
+
+  // Show filter bar
+  document.getElementById('filterBar').style.display = 'flex';
+  document.getElementById('upsellChipLabel').textContent = clickedSku;
+
+  renderTable();
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  INDÍTÁS
-// ═══════════════════════════════════════════════════════════════
-init();
+function clearUpsellFilter() {
+  upsellFilter = null;
+  document.getElementById('filterBar').style.display = 'none';
+  renderTable();
+}
+
+// ═══════════════════════════════════════════════════════
+//  EVENTS
+// ═══════════════════════════════════════════════════════
+document.getElementById('customerSelect').addEventListener('change', onCustomerChange);
+
+document.getElementById('skuSearch').addEventListener('input', function() {
+  searchQuery = this.value.trim();
+  if (currentArsor) renderTable();
+});
+
+document.getElementById('clearUpsell').addEventListener('click', function(e) {
+  e.preventDefault();
+  clearUpsellFilter();
+});
+
+// Delegated click for upsell tags
+document.getElementById('tableBody').addEventListener('click', function(e) {
+  const tag = e.target.closest('.upsell-tag');
+  if (tag) {
+    e.preventDefault();
+    applyUpsellFilter(tag.dataset.upsell);
+  }
+});
+
+function scrollTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════
+loadAll();
 </script>
 </body>
 </html>
