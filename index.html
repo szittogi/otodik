@@ -336,45 +336,46 @@ function parsePricelist(rows) {
 
   const keys = Object.keys(rows[0]);
 
-  // ── Cikkszám oszlop ──
+  // Cikkszám
   const codeKey =
     keys.find(k => /^cikkszám$|^cikkszam$|^sku$|^kod$|^code$/i.test(k.trim())) ||
     keys.find(k => /cikkszam|cikk_szam|sku|item.?code/i.test(k)) ||
     keys[0];
 
-  // ── Név oszlop – explicit lista, majd score-alapú fallback ──
+  // Név
   const nameKey =
     keys.find(k => /^cikknév$|^cikknev$|^név$|^nev$|^name$/i.test(k.trim())) ||
-    keys.find(k => /megnevezes|megnevez|leiras|termek.?nev|nev.?termek/i.test(k)) ||
-    // score: leghosszabb átlagos érték, ami nem cikkszám és nem szám
+    keys.find(k => /megnevezes|megnevez|leiras|termek.?nev/i.test(k)) ||
     keys.filter(k => k !== codeKey).sort((a, b) => {
       const avg = key => rows.slice(0, 10).reduce((s, r) => s + String(r[key] || '').length, 0);
-      const isNumeric = key => rows.slice(0, 5).every(r => /^\d+\.?\d*$/.test(String(r[key] || '')));
-      if (isNumeric(a) && !isNumeric(b)) return 1;
-      if (!isNumeric(a) && isNumeric(b)) return -1;
       return avg(b) - avg(a);
-    })[0] ||
-    keys[1] || keys[0];
+    })[0] || keys[1] || keys[0];
 
-  // ── Upsell oszlop ──
+  // Upsell
   const upsellKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
 
-  // ── Arsor oszlop vagy arsor-mint-fejléc ──
-  // 1. Van-e dedikált oszlop amelynek ÉRTÉKEI "arsor"-ral kezdődnek?
+  // Ár oszlop: Nettó ár, Bruttó ár, ár, price stb.
+  const priceKey =
+    keys.find(k => /^nettó\s*ár$|^netto\s*ar$/i.test(k.trim())) ||
+    keys.find(k => /^bruttó\s*ár$|^brutto\s*ar$/i.test(k.trim())) ||
+    keys.find(k => /nett.*ár|nett.*ar|netto/i.test(k)) ||
+    keys.find(k => /brut.*ár|brut.*ar|brutto/i.test(k)) ||
+    keys.find(k => /^ár$|^ar$|^price$|egységár|egysegar/i.test(k.trim())) ||
+    keys.find(k => /ár|price/i.test(k) && k !== codeKey && k !== nameKey);
+
+  // Arsor oszlop: értékei "arsor"-ral kezdődnek (pl. "Árlista" nevű oszlop)
   let arsorKey = null;
   for (const k of keys) {
     const hits = rows.slice(0, 30).filter(r => String(r[k] || '').toLowerCase().startsWith('arsor')).length;
     if (hits >= 2) { arsorKey = k; break; }
   }
 
-  // 2. Ha nincs dedikált oszlop → a fejlécek maguk az arsor nevek
-  const arsorColKeys = arsorKey
-    ? null
-    : keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
+  // Arsor oszlopok a fejlécben
+  const arsorColKeys = keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
 
   console.warn('=== ÁRLISTA PARSE ===');
-  console.warn('codeKey:', codeKey, '| nameKey:', nameKey, '| arsorKey:', arsorKey, '| arsorColKeys:', arsorColKeys);
-  console.warn('Összes oszlop:', keys);
+  console.warn('codeKey:', codeKey, '| nameKey:', nameKey, '| priceKey:', priceKey, '| arsorKey:', arsorKey);
+  console.warn('arsorColKeys:', arsorColKeys, '| összes:', keys);
   console.warn('1. sor:', rows[0]);
 
   for (const row of rows) {
@@ -382,29 +383,26 @@ function parsePricelist(rows) {
     if (!rawCode) continue;
 
     if (arsorKey) {
-      // Egy sor = egy arsor érték
+      // Sor-szintű arsor érték (pl. "Árlista" oszlop = "arsor01_akku_xado_nagyker")
       const arsor = String(row[arsorKey] || '').trim().toLowerCase();
       if (!arsor) continue;
       if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
-      state.priceByArsor[arsor].push(row);
-    } else if (arsorColKeys && arsorColKeys.length) {
-      // Minden arsor-oszlophoz külön rekord
+      state.priceByArsor[arsor].push({ ...row, __priceKey: priceKey });
+    } else if (arsorColKeys.length) {
+      // Fejléc-szintű arsor oszlopok
       for (const pk of arsorColKeys) {
         const arsor = pk.trim().toLowerCase();
         if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
         state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
       }
     } else {
-      // Fallback: egyetlen ármező az utolsó numerikus oszlop
-      const priceKey = keys.filter(k => k !== codeKey && k !== nameKey).find(k =>
-        rows.slice(0, 5).some(r => /^\d+\.?\d*$/.test(String(r[k] || '').replace(/\s/g,'')))
-      ) || keys[keys.length - 1];
+      // Fallback egyetlen árlista
       if (!state.priceByArsor['__default__']) state.priceByArsor['__default__'] = [];
       state.priceByArsor['__default__'].push({ ...row, __priceKey: priceKey });
     }
   }
 
-  state._priceMeta = { codeKey, nameKey, upsellKey };
+  state._priceMeta = { codeKey, nameKey, upsellKey, priceKey };
   console.warn('Arsor csoportok:', Object.keys(state.priceByArsor));
 }
 
@@ -495,16 +493,8 @@ function buildVisibleRows(arsor) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
 
-    // Price: use __priceKey marker if set, else find column matching arsor name
-    let price = '';
-    if (row.__priceKey) {
-      price = row[row.__priceKey];
-    } else {
-      // Try exact match, then case-insensitive
-      price = row[arsor] ??
-              row[Object.keys(row).find(k => k.toLowerCase() === arsor.toLowerCase())] ??
-              '';
-    }
+    // Ár: __priceKey marker (set during parse)
+    const price = row.__priceKey ? (row[row.__priceKey] ?? '') : '';
 
     const info = state.stockMap[nSKU];
     const upStock = info?.upsell || '';
@@ -553,6 +543,9 @@ function renderTable() {
     tr.innerHTML = `
       <td class="sku-cell${oos?' oos':''}">${esc(r.sku)}</td>
       <td class="name-cell">${esc(r.name)}</td>
+      <td>${r.size && r.size !== '–' ? `<span class="size-badge">${esc(r.size)}</span>` : '—'}</td>
+      <td class="stock-val">${r.stock === null ? '—' : r.stock}</td>
+      <td><span class="price-val">${formatPrice(r.price)}</span></td>
       <td>${upsellHTML}</td>
       <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
     `;
@@ -561,7 +554,7 @@ function renderTable() {
 
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
-    <th>Cikkszám</th><th>Név</th><th>Upsell</th><th></th>
+    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th><th>Ár</th><th>Upsell</th><th></th>
   </tr></thead>`;
   table.appendChild(tbody);
 
