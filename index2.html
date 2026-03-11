@@ -20,8 +20,8 @@
       --radius: 10px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
-    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+    html { height: 100%; }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
     header {
       flex-shrink: 0;
@@ -93,8 +93,9 @@
     .error-box { background: color-mix(in srgb,var(--danger) 10%,transparent); border: 1px solid color-mix(in srgb,var(--danger) 30%,transparent); border-radius: var(--radius); padding: 16px 20px; color: var(--danger); font-size: 13px; margin: 20px 40px; white-space: pre-wrap; }
 
     /* main */
-    #app-loading, #app-error { flex-shrink: 0; }
-    #app-main { flex: 1; overflow-y: auto; }
+    #app-loading { flex: 1; }
+    #app-error { flex-shrink: 0; }
+    #app-main { flex: 1; min-height: 0; overflow-y: auto; }
     .container { max-width: 1400px; margin: 0 auto; padding: 24px 40px; }
 
     /* table */
