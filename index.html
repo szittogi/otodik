@@ -171,9 +171,12 @@
 /* ═══════════════════════════════════════════════
    CONFIG – URL-ek
 ═══════════════════════════════════════════════ */
-const URL_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBKRkhJMUtwRkR3UXFUdTFPS1ZXd1Utd1Vrd09DYVl6Q1dKMVBmdkt1LW1tT1FWWEZ1VW9FYUNDdklqbTdOc1VvX0tGd29Lc05aRTNzMWg0XzdoSUNSUHJPRzBLRWxTS2hGajhlZzRYZ25IUFk9';
-const URL_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzBtQTVXd0UxOV9QSHBoMm9EUkJpakVZZXpacFp0MVBNVnBicTZFZFQ2RXFGMDY3VkFPRnFna1BnMTdIMkNJd3lyTW5VVzlEZDZ6ZjFrY0NZdkNXa0pGcEZhRWY5b19Rc2pQcUFVTVF0STJ2MzQ9';
-const URL_SIZES     = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByXzFVTkF6NUVJdG9kd2dSb2Q2OXJYX2VqQmYxLVVaOGs0RW9IVVlpemE0VXE3d2J6Rld6TFBaX1ZvQzlQdllEa3BCb1BkLTl5VjBVN0I0SDhtRGhvU3djNXZRalF5dVlVdXdIWndrZkhkT0l1VkU9';
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  ADATFORRÁS URL-EK – itt cseréld le ha lejárnak             ║
+// ╚══════════════════════════════════════════════════════════════╝
+const URL_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVm9WQ1NrbHF3a18yeWhRWWU1cGhtcmJpQlVDZkJKSEVxQlpoMVV6b0J4MTlEZXd4Ml8tc2RDelhJeUZNaG1nRW9hUXI2SVlxRmZVbVNBZ3J5S3NNclRFVXRXRi1acy05ZFlnckJKZUlwRjdJLW89';  // 1. Vevők + csoportok
+const URL_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVm1NMlh2T3BXVWU4NHUwZ3FtU1dabWZFVWQ4TE9nZm5SRHFic0xmcm52VndEX1pSWFlSbFd2ZWJKWHczb0FFeVF0dlZSZHhHTHY5NWV0cHl3U0VsNXVCRUc4UEUtVm1GaTVjUy1ZQlNHbnZkVXc9';  // 2. Termékek + árak csoportonként
+const URL_SIZES     = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVnFERDIyRnhUWjhIRFlZQzBuOWZ0MVRBTW1HN1BWbFhzNEJBREZoeFRGYTBsSHh6b25YWFAzZ2xGeDZaMjhsakpTRGdxVjlYekxvbmdYMHhxU2I0M3JIRF9RaTBIMDFUOFFIZEk2MjF0b3JXUVU9';  // 3. Méretek + készlet
 
 /* ═══════════════════════════════════════════════
    HELPERS
@@ -331,62 +334,78 @@ function parsePricelist(rows) {
   state.priceByArsor = {};
   if (!rows.length) return;
 
-  const keys    = Object.keys(rows[0]);
-  const codeKey = keys.find(k=>/cikkszam|cikk_szam|sku|kod|code|item/i.test(k)) || keys[0];
-  // Name key: try exact 'Név', then patterns, then score-based fallback
-  const nameKey = keys.find(k=> k==='Cikknév' || k==='Név' || k==='cikknév' || k==='név') ||
-                  keys.find(k=> /cikknev|megnevezes|leiras|termek.*nev|nev.*termek/i.test(k)) ||
-                  keys.find(k=> /^n[eé]v$|^name$/i.test(k)) ||
-                  // fallback: longest average value that isn't the code or arsor key
-                  keys.filter(k=> k!==codeKey).sort((a,b)=>{
-                    const avg = r => rows.slice(0,10).reduce((s,x)=>s+String(x[r]||'').length,0);
-                    return avg(b)-avg(a);
-                  })[0] || keys[1] || keys[0];
+  const keys = Object.keys(rows[0]);
 
-  // arsor column: a column whose values start with "arsor"
-  let arsorKey = keys.find(k=>/arsor|arlista|arlistacsoport|pricelist|price_list|listacsop/i.test(k));
-  // fallback: find column where many values start with "arsor"
-  if (!arsorKey) {
-    for (const k of keys) {
-      const matches = rows.slice(0,20).filter(r=>String(r[k]).toLowerCase().startsWith('arsor')).length;
-      if (matches >= 3) { arsorKey = k; break; }
-    }
+  // ── Cikkszám oszlop ──
+  const codeKey =
+    keys.find(k => /^cikkszám$|^cikkszam$|^sku$|^kod$|^code$/i.test(k.trim())) ||
+    keys.find(k => /cikkszam|cikk_szam|sku|item.?code/i.test(k)) ||
+    keys[0];
+
+  // ── Név oszlop – explicit lista, majd score-alapú fallback ──
+  const nameKey =
+    keys.find(k => /^cikknév$|^cikknev$|^név$|^nev$|^name$/i.test(k.trim())) ||
+    keys.find(k => /megnevezes|megnevez|leiras|termek.?nev|nev.?termek/i.test(k)) ||
+    // score: leghosszabb átlagos érték, ami nem cikkszám és nem szám
+    keys.filter(k => k !== codeKey).sort((a, b) => {
+      const avg = key => rows.slice(0, 10).reduce((s, r) => s + String(r[key] || '').length, 0);
+      const isNumeric = key => rows.slice(0, 5).every(r => /^\d+\.?\d*$/.test(String(r[key] || '')));
+      if (isNumeric(a) && !isNumeric(b)) return 1;
+      if (!isNumeric(a) && isNumeric(b)) return -1;
+      return avg(b) - avg(a);
+    })[0] ||
+    keys[1] || keys[0];
+
+  // ── Upsell oszlop ──
+  const upsellKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
+
+  // ── Arsor oszlop vagy arsor-mint-fejléc ──
+  // 1. Van-e dedikált oszlop amelynek ÉRTÉKEI "arsor"-ral kezdődnek?
+  let arsorKey = null;
+  for (const k of keys) {
+    const hits = rows.slice(0, 30).filter(r => String(r[k] || '').toLowerCase().startsWith('arsor')).length;
+    if (hits >= 2) { arsorKey = k; break; }
   }
 
-  // If there's no dedicated arsor column, each non-code/name column might BE the arsor name
-  // (i.e. the column header itself is the arsor group, and rows appear under it)
-  const priceColKeys = keys.filter(k=>k!==codeKey && k!==nameKey && k!==arsorKey);
+  // 2. Ha nincs dedikált oszlop → a fejlécek maguk az arsor nevek
+  const arsorColKeys = arsorKey
+    ? null
+    : keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
 
-  console.log('Price cols – code:', codeKey, 'name:', nameKey, 'arsor:', arsorKey, 'priceCols:', priceColKeys);
-  console.log('Price sample:', rows[0]);
-
-  // upsell column in pricelist
-  const upsellKey = keys.find(k=>/upsell|kapcsolt|related/i.test(k));
+  console.warn('=== ÁRLISTA PARSE ===');
+  console.warn('codeKey:', codeKey, '| nameKey:', nameKey, '| arsorKey:', arsorKey, '| arsorColKeys:', arsorColKeys);
+  console.warn('Összes oszlop:', keys);
+  console.warn('1. sor:', rows[0]);
 
   for (const row of rows) {
-    const rawCode = String(row[codeKey]||'').trim();
+    const rawCode = String(row[codeKey] || '').trim();
     if (!rawCode) continue;
 
     if (arsorKey) {
-      // Each row has an explicit arsor value
-      const arsor = String(row[arsorKey]||'').trim().toLowerCase();
+      // Egy sor = egy arsor érték
+      const arsor = String(row[arsorKey] || '').trim().toLowerCase();
       if (!arsor) continue;
       if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
       state.priceByArsor[arsor].push(row);
-    } else {
-      // Column-per-arsor layout: each price column header IS the arsor
-      for (const pk of priceColKeys) {
+    } else if (arsorColKeys && arsorColKeys.length) {
+      // Minden arsor-oszlophoz külön rekord
+      for (const pk of arsorColKeys) {
         const arsor = pk.trim().toLowerCase();
-        if (!arsor.startsWith('arsor')) continue;
         if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
-        // Clone row but mark which price column to use
         state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
       }
+    } else {
+      // Fallback: egyetlen ármező az utolsó numerikus oszlop
+      const priceKey = keys.filter(k => k !== codeKey && k !== nameKey).find(k =>
+        rows.slice(0, 5).some(r => /^\d+\.?\d*$/.test(String(r[k] || '').replace(/\s/g,'')))
+      ) || keys[keys.length - 1];
+      if (!state.priceByArsor['__default__']) state.priceByArsor['__default__'] = [];
+      state.priceByArsor['__default__'].push({ ...row, __priceKey: priceKey });
     }
   }
 
   state._priceMeta = { codeKey, nameKey, upsellKey };
-  console.log('Arsor keys found:', Object.keys(state.priceByArsor));
+  console.warn('Arsor csoportok:', Object.keys(state.priceByArsor));
 }
 
 /* ═══════════════════════════════════════════════
@@ -476,9 +495,16 @@ function buildVisibleRows(arsor) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
 
-    // Price: explicit column or __priceKey marker
-    const priceColKey = row.__priceKey || arsor;
-    const price = row[priceColKey] ?? row[Object.keys(row).find(k=>k.toLowerCase()===arsor)] ?? '';
+    // Price: use __priceKey marker if set, else find column matching arsor name
+    let price = '';
+    if (row.__priceKey) {
+      price = row[row.__priceKey];
+    } else {
+      // Try exact match, then case-insensitive
+      price = row[arsor] ??
+              row[Object.keys(row).find(k => k.toLowerCase() === arsor.toLowerCase())] ??
+              '';
+    }
 
     const info = state.stockMap[nSKU];
     const upStock = info?.upsell || '';
