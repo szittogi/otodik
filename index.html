@@ -513,100 +513,154 @@ async function loadAll() {
 // ═══════════════════════════════════════════════════════
 //  PROCESS
 // ═══════════════════════════════════════════════════════
+function findKey(keys, patterns) {
+  // Case-insensitive, trim-aware column finder
+  for (const pat of patterns) {
+    const found = keys.find(k => pat.test(k.trim()));
+    if (found) return found;
+  }
+  return null;
+}
+
 function processData(custRaw, priceRaw, stockRaw) {
-  // ── Customers ──
-  // Expected columns: something like "Vevő neve", "Csoport" or "Csoportok"
-  // We'll auto-detect
+
+  // ── DEBUG: log column names to console ──
+  if (custRaw.length)  console.log('Vevő oszlopok:',  Object.keys(custRaw[0]));
+  if (priceRaw.length) console.log('Ár oszlopok:',    Object.keys(priceRaw[0]));
+  if (stockRaw.length) console.log('Készlet oszlopok:', Object.keys(stockRaw[0]));
+
+  // ══════════════════════════════════════
+  //  CUSTOMERS
+  //  Várt: Vevő neve + Csoportok oszlop
+  //  A "Csoportok" cellában lehet több érték vesszővel/sortöréssel elválasztva
+  // ══════════════════════════════════════
   rawCustomers = [];
   if (custRaw.length) {
     const keys = Object.keys(custRaw[0]);
-    // Find name column (first col likely)
-    const nameKey = keys[0];
-    // Find group column (look for csoport/group/groups)
-    const groupKey = keys.find(k =>
-      /csoport|group|tag|kategor/i.test(k)
-    ) || keys[1];
+
+    const nameKey = findKey(keys, [
+      /^név$/i, /^vevő$/i, /^vevőnév/i, /^name$/i, /^ügyfél/i, /^cégnév/i
+    ]) || keys[0];
+
+    const groupKey = findKey(keys, [
+      /^csoportok$/i, /^csoport$/i, /^groups?$/i, /^tag$/i, /^kategór/i, /^árcsoport/i
+    ]) || keys[1];
+
+    console.log('Vevő név oszlop:', nameKey, '| Csoport oszlop:', groupKey);
 
     custRaw.forEach(row => {
       const name = String(row[nameKey] || '').trim();
       if (!name) return;
-      // Groups may be comma or semicolon separated, or multiple columns
+
       let groups = [];
-      if (groupKey && row[groupKey]) {
+      if (groupKey && row[groupKey] != null && row[groupKey] !== '') {
+        // Split by comma, semicolon, pipe, newline
         groups = String(row[groupKey])
-          .split(/[,;|\/\n]+/)
+          .split(/[,;|\n\r]+/)
           .map(g => g.trim())
           .filter(Boolean);
       }
-      // Also scan all columns for group-like values
-      keys.forEach(k => {
-        if (k === nameKey) return;
-        const v = String(row[k] || '').trim();
-        if (v && !groups.includes(v)) groups.push(v);
-      });
       rawCustomers.push({ name, groups });
     });
   }
 
-  // ── Prices ──
-  // Expected: SKU, Cikknév, [arsor columns], Upsell
+  // ══════════════════════════════════════
+  //  PRICES
+  //  Fejlécek: cikkszám | Árlista | Név | Nettó ár | Nettó ár pénznem | Bruttó ár | Bruttó ár pénznem | Upsell
+  //  Az "Árlista" oszlop értéke = arsor kulcs (pl. arsor01_akku_xado_nagyker)
+  //  Minden sor egy termék–árlista párosítás
+  // ══════════════════════════════════════
   rawPrices = {};
   if (priceRaw.length) {
     const keys = Object.keys(priceRaw[0]);
-    const skuKey  = keys.find(k => /^sku$/i.test(k.trim())) || keys[0];
-    const nameKey = keys.find(k => /név|name|cikk|megnevez/i.test(k)) || keys[1];
-    const upsellKey = keys.find(k => /upsell/i.test(k));
-    // arsor columns
-    const arsorKeys = keys.filter(k => /^arsor/i.test(k.trim()));
 
-    // Build price map per arsor
-    arsorKeys.forEach(ak => { rawPrices[ak.trim().toLowerCase()] = []; });
+    const skuKey = findKey(keys, [
+      /^cikkszám$/i, /^sku$/i, /^cikk.*szám/i, /^item.*code/i, /^code$/i, /^art.*nr/i
+    ]) || keys[0];
+
+    const arsorCol = findKey(keys, [
+      /^árlista$/i, /^price.*list/i, /^pricelist/i, /^árcsoport/i, /^lista$/i
+    ]) || keys[1];
+
+    const nameKey = findKey(keys, [
+      /^név$/i, /^cikknév$/i, /^megnevez/i, /^name$/i, /^termék.*név/i, /^leírás/i
+    ]) || keys[2];
+
+    // Prefer Nettó ár, fallback to Bruttó ár
+    const priceKey = findKey(keys, [
+      /^nettó\s*ár$/i, /^netto\s*ar$/i, /^net.*price/i, /^nettó$/i
+    ]) || findKey(keys, [
+      /^bruttó\s*ár$/i, /^brutto\s*ar$/i, /^gross.*price/i, /^bruttó$/i, /^ár$/i, /^price$/i
+    ]) || keys[3];
+
+    const upsellKey = findKey(keys, [/^upsell/i, /^kapcsolódó/i, /^ajánlott/i]);
+
+    console.log('Ár fájl → SKU:', skuKey, '| Árlista:', arsorCol, '| Név:', nameKey, '| Ár:', priceKey, '| Upsell:', upsellKey);
 
     priceRaw.forEach(row => {
-      const rawSku = row[skuKey];
-      const sku = normalizeSKU(rawSku);
+      const sku = normalizeSKU(row[skuKey]);
       if (!sku) return;
+
+      // The "Árlista" cell value is the arsor key for this row
+      const arsorRaw = String(row[arsorCol] || '').trim();
+      if (!arsorRaw) return;
+      const arsorNorm = arsorRaw.toLowerCase();
+
       const cikkNev = String(row[nameKey] || '').trim();
+      const price   = row[priceKey];
       const upsellRaw = upsellKey ? String(row[upsellKey] || '').trim() : '';
-      // Parse upsell SKU list
       const upsellSkus = upsellRaw
         ? upsellRaw.split(/[,;]+/).map(s => normalizeSKU(s)).filter(Boolean)
         : [];
 
-      arsorKeys.forEach(ak => {
-        const arsorNorm = ak.trim().toLowerCase();
-        const price = row[ak];
-        rawPrices[arsorNorm].push({
-          sku,
-          cikkNev,
-          price: price !== '' && price !== undefined ? price : null,
-          upsellSkus
-        });
+      if (!rawPrices[arsorNorm]) rawPrices[arsorNorm] = [];
+      rawPrices[arsorNorm].push({
+        sku,
+        cikkNev,
+        price: (price !== '' && price !== undefined && price !== null) ? price : null,
+        upsellSkus
       });
     });
 
-    // Build skuIndex from first arsor (or all)
+    console.log('Árlista kulcsok:', Object.keys(rawPrices));
+
+    // Build global SKU index (all rows)
     skuIndex = {};
-    (rawPrices[arsorKeys[0]?.trim().toLowerCase()] || []).forEach(r => {
-      skuIndex[r.sku] = r;
+    Object.values(rawPrices).forEach(list => {
+      list.forEach(r => { if (!skuIndex[r.sku]) skuIndex[r.sku] = r; });
     });
   }
 
-  // ── Stock ──
+  // ══════════════════════════════════════
+  //  STOCK
+  //  Várt: SKU + Méret + Készleten
+  // ══════════════════════════════════════
   stockMap = {};
   if (stockRaw.length) {
     const keys = Object.keys(stockRaw[0]);
-    const skuKey   = keys.find(k => /^sku$/i.test(k.trim())) || keys[0];
-    const sizeKey  = keys.find(k => /méret|size/i.test(k)) || keys[1];
-    const stockKey = keys.find(k => /készlet|stock|qty|menny/i.test(k)) || keys[2];
+
+    const skuKey = findKey(keys, [
+      /^cikkszám$/i, /^sku$/i, /^cikk.*szám/i, /^code$/i
+    ]) || keys[0];
+
+    const sizeKey = findKey(keys, [
+      /^méret$/i, /^meret$/i, /^size$/i, /^variáns/i
+    ]) || keys[1];
+
+    const stockKey = findKey(keys, [
+      /^készleten$/i, /^készlet$/i, /^keszlet/i, /^stock$/i, /^qty$/i, /^menny/i, /^db$/i
+    ]) || keys[2];
+
+    console.log('Készlet → SKU:', skuKey, '| Méret:', sizeKey, '| Készlet:', stockKey);
 
     stockRaw.forEach(row => {
       const sku = normalizeSKU(row[skuKey]);
       if (!sku) return;
       if (!stockMap[sku]) stockMap[sku] = [];
+      const stockVal = row[stockKey];
       stockMap[sku].push({
-        size: String(row[sizeKey] || '').trim() || '-',
-        stock: row[stockKey] !== '' ? Number(row[stockKey]) : null
+        size:  String(row[sizeKey] || '').trim() || '-',
+        stock: (stockVal !== '' && stockVal != null) ? Number(stockVal) : null
       });
     });
   }
@@ -650,21 +704,40 @@ function onCustomerChange() {
   currentCustomer = rawCustomers.find(c => c.name === name);
   if (!currentCustomer) return;
 
-  // Find arsor group
+  // Find arsor group (case-insensitive, trimmed)
   const arsorGroups = currentCustomer.groups
-    .filter(g => /^arsor/i.test(g));
+    .filter(g => /^arsor/i.test(g.trim()));
+
+  console.log('Vevő csoportjai:', currentCustomer.groups);
+  console.log('Talált arsor csoportok:', arsorGroups);
+  console.log('Elérhető árlista kulcsok:', Object.keys(rawPrices));
 
   if (arsorGroups.length === 0) {
-    showState('🔍', 'Nincs árlista', `A(z) "${name}" vevőhöz nem tartozik "arsor" csoport.`);
+    showState('🔍', 'Nincs árlista',
+      `A(z) "<b>${name}</b>" vevőhöz nem tartozik "arsor" csoport.<br>
+       <small style="opacity:.6">Csoportok: ${currentCustomer.groups.join(', ') || '(üres)'}</small>`);
     currentArsor = null;
     return;
   }
 
-  // First arsor group
-  currentArsor = arsorGroups[0].trim().toLowerCase();
+  // First arsor group, normalized
+  const arsorCandidate = arsorGroups[0].trim().toLowerCase();
+  const allPriceKeys   = Object.keys(rawPrices);
 
-  if (!rawPrices[currentArsor] || rawPrices[currentArsor].length === 0) {
-    showState('📋', 'Üres árlista', `Az "${currentArsor}" árlistán nincs termék.`);
+  // 1) exact match
+  // 2) price key starts with arsor candidate
+  // 3) arsor candidate starts with price key
+  currentArsor = allPriceKeys.find(k => k === arsorCandidate)
+    || allPriceKeys.find(k => k.startsWith(arsorCandidate))
+    || allPriceKeys.find(k => arsorCandidate.startsWith(k))
+    || null;
+
+  console.log(`Arsor egyeztetés: "${arsorCandidate}" → "${currentArsor}"`);
+
+  if (!currentArsor || !rawPrices[currentArsor] || rawPrices[currentArsor].length === 0) {
+    showState('📋', 'Üres árlista',
+      `A(z) "<b>${arsorCandidate}</b>" árlistán nincs termék.<br>
+       <small style="opacity:.6">Elérhető listák: ${allPriceKeys.slice(0,5).join(', ')}${allPriceKeys.length > 5 ? '…' : ''}</small>`);
     return;
   }
 
