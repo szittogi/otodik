@@ -334,8 +334,6 @@ function parseCustomers(rows) {
   let groupKey = keys.find(k=> /csoport|group|kategor|pricegroup|ar.*csoport|arkategoria/i.test(k));
   if (!groupKey) groupKey = keys.find(k=> k!==nameKey) || keys[0];
 
-  console.log('Customer cols – name:', nameKey, 'group:', groupKey);
-  console.log('Customer sample:', rows[0]);
 
   for (const row of rows) {
     const name = String(row[nameKey]||'').trim();
@@ -394,37 +392,6 @@ function parsePricelist(rows) {
   // Arsor oszlopok a fejlécben
   const arsorColKeys = keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
 
-  console.warn('=== ÁRLISTA PARSE ===');
-  console.warn('codeKey:', codeKey, '| nameKey:', nameKey, '| priceKey:', priceKey, '| arsorKey:', arsorKey);
-  console.warn('arsorColKeys:', arsorColKeys, '| összes:', keys);
-  console.warn('1. sor:', rows[0]);
-
-  for (const row of rows) {
-    const rawCode = String(row[codeKey] || '').trim();
-    if (!rawCode) continue;
-
-    if (arsorKey) {
-      // Sor-szintű arsor érték (pl. "Árlista" oszlop = "arsor01_akku_xado_nagyker")
-      const arsor = String(row[arsorKey] || '').trim().toLowerCase();
-      if (!arsor) continue;
-      if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
-      state.priceByArsor[arsor].push({ ...row, __priceKey: priceKey });
-    } else if (arsorColKeys.length) {
-      // Fejléc-szintű arsor oszlopok
-      for (const pk of arsorColKeys) {
-        const arsor = pk.trim().toLowerCase();
-        if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
-        state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
-      }
-    } else {
-      // Fallback egyetlen árlista
-      if (!state.priceByArsor['__default__']) state.priceByArsor['__default__'] = [];
-      state.priceByArsor['__default__'].push({ ...row, __priceKey: priceKey });
-    }
-  }
-
-  state._priceMeta = { codeKey, nameKey, upsellKey, priceKey };
-  console.warn('Arsor csoportok:', Object.keys(state.priceByArsor));
 }
 
 /* ═══════════════════════════════════════════════
@@ -454,27 +421,6 @@ function parseStockSize(rows) {
 
   const upKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
 
-  console.warn('=== KÉSZLET/MÉRET PARSE ===');
-  console.warn('codeKey:', codeKey, '| sizeKey:', sizeKey, '| stockKey:', stockKey);
-  console.warn('Összes oszlop:', keys);
-  console.warn('1. sor:', rows[0]);
-
-  for (const row of rows) {
-    const nSKU = normalizeSKU(row[codeKey]);
-    if (!nSKU) continue;
-    // Strip verbose prefix from size field e.g. "Méretei (HxSzxM [mm]) - 120x60x80"
-    let rawSize = sizeKey ? String(row[sizeKey] || '').trim() : '–';
-    rawSize = rawSize.replace(/^m[eé]retei?\s*\([^)]*\)\s*[-–]\s*/i, '').trim() || '–';
-    state.stockMap[nSKU] = {
-      size  : rawSize,
-      stock : stockKey ? toNum(row[stockKey])                : null,
-      upsell: upKey    ? String(row[upKey]    || '').trim() : '',
-    };
-  }
-  console.warn('Készlet tétel count:', Object.keys(state.stockMap).length);
-  // Sample
-  const sample = Object.entries(state.stockMap).slice(0,3);
-  sample.forEach(([k,v]) => console.warn(' ', k, '->', v));
 }
 
 /* ═══════════════════════════════════════════════
@@ -660,18 +606,10 @@ function renderTable() {
     const q = normalizeSKU(state.skuFilter);
     const before = rows.length;
     rows = rows.filter(r => r.sku.includes(q));
-    console.log('SKU filter:', JSON.stringify(state.skuFilter), '-> normalized:', q, '| before:', before, '| after:', rows.length);
-    if (rows.length === 0 && before > 0) {
-      // Show first 5 SKUs to diagnose
-      const sample = state.visibleRows.slice(0, 5).map(r => r.sku);
-      console.log('Sample SKUs in visibleRows:', sample);
-      console.log('EA match test:', state.visibleRows.filter(r => r.sku.startsWith('EA')).slice(0,5).map(r=>r.sku));
-    }
   }
 
-  try { updateBadges(rows.length); } catch(e) { console.error('updateBadges error:', e); }
+  updateBadges(rows.length);
 
-  console.log('renderTable: rows to render:', rows.length, rows.map(r=>r.sku));
 
   if (!rows.length) {
     container.innerHTML = '<div class="empty">Nincs találat.</div>';
@@ -732,7 +670,7 @@ function applyUpsellFilter(sku) {
 ═══════════════════════════════════════════════ */
 function updateBadges(count) {
   const row = document.getElementById('badge-row');
-  if (!row) { console.error('badge-row not found!'); return; }
+  if (!row) return;
   row.innerHTML = '';
   const add = (label, val, cls='') => {
     const b = document.createElement('div');
@@ -850,6 +788,20 @@ function initControls() {
 
 function scrollToTop() { window.scrollTo(0, 0); }
 
+function fixStickyHeader() {
+  const header = document.querySelector('header');
+  if (!header) return;
+  const h = Math.ceil(header.getBoundingClientRect().height);
+  document.querySelectorAll('thead').forEach(t => t.style.top = h + 'px');
+}
+
+window.addEventListener('resize', fixStickyHeader);
+
+// Also observe header size changes (badge row toggles change its height)
+if (window.ResizeObserver) {
+  new ResizeObserver(fixStickyHeader).observe(document.querySelector('header') || document.body);
+}
+
 function updateHeaderHeight() {
   const h = document.getElementById('main-header').offsetHeight;
   document.documentElement.style.setProperty('--header-h', h + 'px');
@@ -873,27 +825,7 @@ async function init() {
     parsePricelist(priceRows);
     parseStockSize(sizeRows);
 
-    // Debug: show detected column mapping in console AND on page
-    const dbg = state._priceMeta;
-    console.warn('=== OSZLOP FELISMERÉS ===');
-    console.warn('Árlista – codeKey:', dbg.codeKey, '| nameKey:', dbg.nameKey, '| upsellKey:', dbg.upsellKey);
-    console.warn('Árlista – arsor csoportok:', Object.keys(state.priceByArsor));
-    console.warn('Árlista – 1. sor:', priceRows[0]);
-    console.warn('Árlista – összes oszlop:', Object.keys(priceRows[0]||{}));
-    // Show debug bar on page
-    const debugBar = document.createElement('div');
-    debugBar.id = 'debug-bar';
-    debugBar.style.cssText = 'background:#1a1200;border:1px solid #e8c44a44;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-family:DM Mono,monospace;font-size:11px;color:#e8c44a88;line-height:1.8';
-    debugBar.innerHTML = '<strong style="color:#e8c44a">DEBUG – Árlista oszlopok:</strong><br>' +
-      'Cikkszám oszlop: <strong style="color:#fff">' + (dbg.codeKey||'?') + '</strong> &nbsp;|&nbsp; ' +
-      'Név oszlop: <strong style="color:#fff">' + (dbg.nameKey||'?') + '</strong> &nbsp;|&nbsp; ' +
-      'Upsell oszlop: <strong style="color:#fff">' + (dbg.upsellKey||'nincs') + '</strong><br>' +
-      'Összes oszlop: <span style="color:#aaa">' + Object.keys(priceRows[0]||{}).join(', ') + '</span><br>' +
-      'Arsor csoportok: <span style="color:#4ae8b0">' + Object.keys(state.priceByArsor).join(', ') + '</span>';
-    document.getElementById('app-loading').style.display = 'none';
-    document.getElementById('app-main').style.display    = '';
-    // Insert debug bar after app-main is visible
-    document.getElementById('app-main').querySelector('.container').prepend(debugBar);
+
     // Measure real header height for sticky thead
     setTimeout(updateHeaderHeight, 50);
 
@@ -903,13 +835,13 @@ async function init() {
     document.getElementById('table-container').innerHTML =
       '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
     updateBadges(0);
+    requestAnimationFrame(fixStickyHeader);
 
   } catch(e) {
     document.getElementById('app-loading').style.display = 'none';
     const err = document.getElementById('app-error');
     err.style.display = 'block';
     err.textContent   = '⚠ Hiba: ' + e.message;
-    console.error(e);
   }
 }
 
