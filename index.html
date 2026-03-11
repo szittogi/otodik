@@ -658,7 +658,7 @@ function renderTable() {
 
   if (state.skuFilter) {
     const q = normalizeSKU(state.skuFilter);
-    rows = rows.filter(r => r.sku.includes(q) || r.name.toLowerCase().includes(state.skuFilter.toLowerCase()));
+    rows = rows.filter(r => r.sku.includes(q));
   }
 
   updateBadges(rows.length);
