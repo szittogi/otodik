@@ -344,9 +344,9 @@
    CONFIGURATION
 ══════════════════════════════════════════════════════════════════ */
 const URLS = {
-  customers : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX1NMTmlManAzeV9WMy03a0ZaZE5WRF9TTWF2QjBjT1pfeWhmV1NPbl9IV080bHZmbEJPZm1xWUticWdwM1pfV0s1X0ZDUUx4ZmR6QTJaOTVmbm51d2RSeVN6VFdEVlhsMGstb0ZVbUxuWC10VFk9',
-  pricelist : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnByX1ExZkFLeWtTWlJybUFDUDY1QkVwc2pHeE5zVW1qSUJlTjdHcUlwLWkyVXhudmYzRHQ5aEk2Zk9yLWNKMWRfNU9HYmh0VklTdlcwdGZfN0RHbmFfMlpLY2xMbzk2elFyM2Y0eDNNdkpFcW1rLVU9',
-  stocksize : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVXhKeDR2Wnp5X0I1LXZrUHU1OXJUdVlUN1FqTVVBVl9PMHJodG85SXNOVUQwcHBOak9NYUZQZnJxSWptSU5vTmpfN0V6anptclRBNXI1SG54NHpydVYwZXpJdllsODhOWkUxMk9ZN2M1WG5ua2M9',
+  customers : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVktUS0lhQUdybnRoeDJWTXRTMk90UXMwSy0yZ0VQTVc5YjNOYTQzRkZGcnBrTDBnOVhQWUg3MGRrLWNHbTRWdDBUcjlDTG9na0pieUtMQTJBLU5LTGRqRGpvV2RoZDZBS0JNNkczQzdSajYyWDA9',
+  pricelist : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkt3U3J3a0ZGX3MwS3B1b3VXb25jX0ZOZ01XOWdILTNyc2ZWQWxISDNGdWh0eXhuNGlRTjdOQlhjZDlyTDFPcmxyUzNzQncwMmVUNUFlSkJySW9CaFk1R28zRnJtbktFaDhMMFdaMUFZOGx5UGs9',
+  stocksize : 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVkxUUV9ZMDZzMXEzeUhGS3Bqd25zTjhHU1g4MWpEWkd6NUppbndOaV93SGg2SnRRcExlX0JJT28xM3lMOWFJdzFtQzluNjNEbGc5dUItbUQ2V0RrN1Z6VkNtQlhhdG9iWmpJa3JtVEVEQUpmWTQ9',
 };
 
 /* ══════════════════════════════════════════════════════════════════
@@ -397,11 +397,43 @@ function fmtPrice(v) {
 
 /** Fetch URL as ArrayBuffer, then parse with SheetJS → array of row objects */
 async function loadExcel(url) {
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} – ${url}`);
-  const buf  = await resp.arrayBuffer();
-  const wb   = XLSX.read(buf, { type: 'array' });
-  const ws   = wb.Sheets[wb.SheetNames[0]];
+  let resp;
+  try {
+    resp = await fetch(url, { credentials: 'include' });
+  } catch (networkErr) {
+    throw new Error(
+      'Hálózati / CORS hiba: ' + networkErr.message + ' | URL vége: ...' + url.slice(-50)
+    );
+  }
+
+  if (!resp.ok) {
+    let detail = '';
+    try { detail = await resp.text(); } catch(_) {}
+    throw new Error(
+      'HTTP ' + resp.status + ' ' + resp.statusText + ' | URL: ...' + url.slice(-50) +
+      (detail ? ('\nSzerver válasz: ' + detail.slice(0, 300)) : '')
+    );
+  }
+
+  // If server returned HTML/JSON it is likely a login page or error
+  const ct = resp.headers.get('content-type') || '';
+  if (ct.includes('text/html') || ct.includes('application/json')) {
+    const text = await resp.text();
+    throw new Error(
+      'Nem Excel érkezett (Content-Type: ' + ct + ') – lejárt a link, vagy belépés szükséges.\n' +
+      'Szerver válasz: ' + text.slice(0, 300)
+    );
+  }
+
+  const buf = await resp.arrayBuffer();
+  let wb;
+  try {
+    wb = XLSX.read(buf, { type: 'array' });
+  } catch(parseErr) {
+    throw new Error('Nem olvasható Excel fájl: ' + parseErr.message);
+  }
+
+  const ws = wb.Sheets[wb.SheetNames[0]];
   return XLSX.utils.sheet_to_json(ws, { defval: '' });
 }
 
@@ -892,7 +924,16 @@ async function main() {
   const setStatus = (msg, isError = false) => {
     statusEl.style.display = '';
     statusEl.className = isError ? 'error' : '';
-    statusEl.innerHTML = isError ? `⚠ ${escHtml(msg)}` : `<span class="spinner"></span> ${escHtml(msg)}`;
+    if (isError) {
+      const parts = String(msg).split('\n');
+      statusEl.innerHTML = parts.map((l, i) =>
+        i === 0
+          ? '<strong>⚠ ' + escHtml(l) + '</strong>'
+          : '<div style="margin-top:6px;font-size:12px;opacity:.8">' + escHtml(l) + '</div>'
+      ).join('');
+    } else {
+      statusEl.innerHTML = '<span class="spinner"></span> ' + escHtml(msg);
+    }
   };
 
   const hideStatus = () => { statusEl.style.display = 'none'; };
