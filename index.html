@@ -20,7 +20,7 @@
       --radius: 10px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: auto; }
     body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
     header {
@@ -101,18 +101,18 @@
     thead { position: sticky; top: 60px; z-index: 10; }
     thead tr { border-bottom: 2px solid var(--border); }
     th {
-      padding: 10px 14px; text-align: left;
-      font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      padding: 11px 16px; text-align: left;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
       color: var(--text-muted); background: var(--surface2); white-space: nowrap;
     }
     tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
     tbody tr:last-child { border-bottom: none; }
     tbody tr:hover { background: var(--surface2); }
-    td { padding: 10px 14px; vertical-align: middle; }
+    td { padding: 13px 16px; vertical-align: middle; font-size: 14px; }
 
-    .sku-cell { font-family: 'DM Mono', monospace; font-size: 11px; }
+    .sku-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
     .sku-cell.oos { color: var(--danger); opacity: .6; }
-    .name-cell { max-width: 340px; white-space: normal; font-weight: 600; }
+    .name-cell { max-width: 500px; white-space: normal; font-weight: 600; font-size: 15px; }
     .size-badge { display: inline-block; padding: 2px 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
     .price-val { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--accent); }
     .stock-val { font-family: 'DM Mono', monospace; font-size: 12px; text-align: center; }
@@ -519,9 +519,6 @@ function renderTable() {
     tr.innerHTML = `
       <td class="sku-cell${oos?' oos':''}">${esc(r.sku)}</td>
       <td class="name-cell">${esc(r.name)}</td>
-      <td>${r.size && r.size!=='–' ? `<span class="size-badge">${esc(r.size)}</span>` : '—'}</td>
-      <td class="stock-val">${r.stock===null?'—':r.stock}</td>
-      <td><span class="price-val">${formatPrice(r.price)}</span></td>
       <td>${upsellHTML}</td>
       <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
     `;
@@ -530,8 +527,7 @@ function renderTable() {
 
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
-    <th>SKU</th><th>Cikknév</th><th>Méret</th>
-    <th>Készleten</th><th>Ár</th><th>Upsell</th><th></th>
+    <th>Cikkszám</th><th>Név</th><th>Upsell</th><th></th>
   </tr></thead>`;
   table.appendChild(tbody);
 
@@ -683,7 +679,7 @@ function initControls() {
   });
 }
 
-function scrollToTop() { window.scrollTo({top:0,behavior:'smooth'}); }
+function scrollToTop() { window.scrollTo(0, 0); }
 
 /* ═══════════════════════════════════════════════
    BOOTSTRAP
