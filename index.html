@@ -728,7 +728,6 @@ function updateBadges(count) {
   };
   if (state.selectedCustomer) add('Vevő', state.selectedCustomer.name, 'ab');
   if (state.activeArsor)      add('Árlista', state.activeArsor, 'ab');
-  if (state.activeUpsellSKUs) add('Upsell', state.activeUpsellSKUs.size + ' termék', 'ub');
   if (state.skuFilter)        add('Kereső', state.skuFilter);
   const info = document.createElement('div');
   info.id = 'info-badge';
@@ -782,8 +781,8 @@ function selectCustomer(c) {
   state.skuFilter = '';
   document.getElementById('customer-input').value = c.name;
   document.getElementById('sku-search').value = '';
-  document.getElementById('btn-clear-upsell').style.display = 'none';
-  document.getElementById('btn-clear-sku').style.display    = 'none';
+  expandedUpsells.clear();
+  document.getElementById('btn-clear-sku').style.display = 'none';
 
   const arsor = getArsorGroup(c);
   state.activeArsor = arsor;
@@ -817,11 +816,7 @@ function initControls() {
     else updateBadges(0);
   });
 
-  document.getElementById('btn-clear-upsell').addEventListener('click', () => {
-    expandedUpsells.clear();
-    document.getElementById('btn-clear-upsell').style.display = 'none';
-    renderTable();
-  });
+  // btn-clear-upsell removed from HTML; expandedUpsells cleared via btn-clear-all
   btnSku.addEventListener('click', () => {
     state.skuFilter = ''; skuInput.value = '';
     btnSku.style.display = 'none';
@@ -830,10 +825,10 @@ function initControls() {
   document.getElementById('btn-clear-all').addEventListener('click', () => {
     state.selectedCustomer = null; state.activeArsor = null;
     state.activeUpsellSKUs = null; state.skuFilter = ''; state.visibleRows = [];
+    expandedUpsells.clear();
     document.getElementById('customer-input').value = '';
     document.getElementById('sku-search').value = '';
-    document.getElementById('btn-clear-upsell').style.display = 'none';
-    document.getElementById('btn-clear-sku').style.display    = 'none';
+    document.getElementById('btn-clear-sku').style.display = 'none';
     document.getElementById('table-container').innerHTML = '';
     document.getElementById('badge-row').innerHTML = '';
   });
@@ -873,12 +868,10 @@ async function init() {
       'Upsell oszlop: <strong style="color:#fff">' + (dbg.upsellKey||'nincs') + '</strong><br>' +
       'Összes oszlop: <span style="color:#aaa">' + Object.keys(priceRows[0]||{}).join(', ') + '</span><br>' +
       'Arsor csoportok: <span style="color:#4ae8b0">' + Object.keys(state.priceByArsor).join(', ') + '</span>';
-    document.getElementById('table-container').before
-      ? document.getElementById('app-main').querySelector('.container').prepend(debugBar)
-      : document.getElementById('table-container').parentNode.insertBefore(debugBar, document.getElementById('table-container'));
-
     document.getElementById('app-loading').style.display = 'none';
     document.getElementById('app-main').style.display    = '';
+    // Insert debug bar after app-main is visible
+    document.getElementById('app-main').querySelector('.container').prepend(debugBar);
 
     initCustomerAutocomplete();
     initControls();
