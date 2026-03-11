@@ -392,6 +392,31 @@ function parsePricelist(rows) {
   // Arsor oszlopok a fejlécben
   const arsorColKeys = keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
 
+  for (const row of rows) {
+    const rawCode = String(row[codeKey] || '').trim();
+    if (!rawCode) continue;
+
+    if (arsorKey) {
+      // Sor-szintű arsor érték (pl. "Árlista" oszlop = "arsor01_akku_xado_nagyker")
+      const arsor = String(row[arsorKey] || '').trim().toLowerCase();
+      if (!arsor) continue;
+      if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+      state.priceByArsor[arsor].push({ ...row, __priceKey: priceKey });
+    } else if (arsorColKeys.length) {
+      // Fejléc-szintű arsor oszlopok
+      for (const pk of arsorColKeys) {
+        const arsor = pk.trim().toLowerCase();
+        if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+        state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
+      }
+    } else {
+      // Fallback egyetlen árlista
+      if (!state.priceByArsor['__default__']) state.priceByArsor['__default__'] = [];
+      state.priceByArsor['__default__'].push({ ...row, __priceKey: priceKey });
+    }
+  }
+
+  state._priceMeta = { codeKey, nameKey, upsellKey, priceKey };
 }
 
 /* ═══════════════════════════════════════════════
