@@ -658,7 +658,15 @@ function renderTable() {
 
   if (state.skuFilter) {
     const q = normalizeSKU(state.skuFilter);
+    const before = rows.length;
     rows = rows.filter(r => r.sku.includes(q));
+    console.log('SKU filter:', JSON.stringify(state.skuFilter), '-> normalized:', q, '| before:', before, '| after:', rows.length);
+    if (rows.length === 0 && before > 0) {
+      // Show first 5 SKUs to diagnose
+      const sample = state.visibleRows.slice(0, 5).map(r => r.sku);
+      console.log('Sample SKUs in visibleRows:', sample);
+      console.log('EA match test:', state.visibleRows.filter(r => r.sku.startsWith('EA')).slice(0,5).map(r=>r.sku));
+    }
   }
 
   updateBadges(rows.length);
