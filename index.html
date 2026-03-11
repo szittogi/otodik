@@ -333,7 +333,15 @@ function parsePricelist(rows) {
 
   const keys    = Object.keys(rows[0]);
   const codeKey = keys.find(k=>/cikkszam|cikk_szam|sku|kod|code|item/i.test(k)) || keys[0];
-  const nameKey = keys.find(k=>/cikknev|nev$|name$|megnevezes|leiras/i.test(k)) || keys[1] || keys[0];
+  // Name key: try exact 'Név', then patterns, then score-based fallback
+  const nameKey = keys.find(k=> k==='Cikknév' || k==='Név' || k==='cikknév' || k==='név') ||
+                  keys.find(k=> /cikknev|megnevezes|leiras|termek.*nev|nev.*termek/i.test(k)) ||
+                  keys.find(k=> /^n[eé]v$|^name$/i.test(k)) ||
+                  // fallback: longest average value that isn't the code or arsor key
+                  keys.filter(k=> k!==codeKey).sort((a,b)=>{
+                    const avg = r => rows.slice(0,10).reduce((s,x)=>s+String(x[r]||'').length,0);
+                    return avg(b)-avg(a);
+                  })[0] || keys[1] || keys[0];
 
   // arsor column: a column whose values start with "arsor"
   let arsorKey = keys.find(k=>/arsor|arlista|arlistacsoport|pricelist|price_list|listacsop/i.test(k));
@@ -695,6 +703,27 @@ async function init() {
     parseCustomers(custRows);
     parsePricelist(priceRows);
     parseStockSize(sizeRows);
+
+    // Debug: show detected column mapping in console AND on page
+    const dbg = state._priceMeta;
+    console.warn('=== OSZLOP FELISMERÉS ===');
+    console.warn('Árlista – codeKey:', dbg.codeKey, '| nameKey:', dbg.nameKey, '| upsellKey:', dbg.upsellKey);
+    console.warn('Árlista – arsor csoportok:', Object.keys(state.priceByArsor));
+    console.warn('Árlista – 1. sor:', priceRows[0]);
+    console.warn('Árlista – összes oszlop:', Object.keys(priceRows[0]||{}));
+    // Show debug bar on page
+    const debugBar = document.createElement('div');
+    debugBar.id = 'debug-bar';
+    debugBar.style.cssText = 'background:#1a1200;border:1px solid #e8c44a44;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-family:DM Mono,monospace;font-size:11px;color:#e8c44a88;line-height:1.8';
+    debugBar.innerHTML = '<strong style="color:#e8c44a">DEBUG – Árlista oszlopok:</strong><br>' +
+      'Cikkszám oszlop: <strong style="color:#fff">' + (dbg.codeKey||'?') + '</strong> &nbsp;|&nbsp; ' +
+      'Név oszlop: <strong style="color:#fff">' + (dbg.nameKey||'?') + '</strong> &nbsp;|&nbsp; ' +
+      'Upsell oszlop: <strong style="color:#fff">' + (dbg.upsellKey||'nincs') + '</strong><br>' +
+      'Összes oszlop: <span style="color:#aaa">' + Object.keys(priceRows[0]||{}).join(', ') + '</span><br>' +
+      'Arsor csoportok: <span style="color:#4ae8b0">' + Object.keys(state.priceByArsor).join(', ') + '</span>';
+    document.getElementById('table-container').before
+      ? document.getElementById('app-main').querySelector('.container').prepend(debugBar)
+      : document.getElementById('table-container').parentNode.insertBefore(debugBar, document.getElementById('table-container'));
 
     document.getElementById('app-loading').style.display = 'none';
     document.getElementById('app-main').style.display    = '';
