@@ -446,6 +446,17 @@ function parseStockSize(rows) {
 
   const upKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
 
+  for (const row of rows) {
+    const nSKU = normalizeSKU(row[codeKey]);
+    if (!nSKU) continue;
+    let rawSize = sizeKey ? String(row[sizeKey] || '').trim() : '–';
+    rawSize = rawSize.replace(/^m[eé]retei?\s*\([^)]*\)\s*[-–]\s*/i, '').trim() || '–';
+    state.stockMap[nSKU] = {
+      size  : rawSize,
+      stock : stockKey ? toNum(row[stockKey]) : null,
+      upsell: upKey    ? String(row[upKey] || '').trim() : '',
+    };
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -777,6 +788,7 @@ function selectCustomer(c) {
 
   buildVisibleRows(arsor);
   renderTable();
+  requestAnimationFrame(fixStickyHeader);
 }
 
 /* ═══════════════════════════════════════════════
@@ -819,13 +831,7 @@ function fixStickyHeader() {
   const h = Math.ceil(header.getBoundingClientRect().height);
   document.querySelectorAll('thead').forEach(t => t.style.top = h + 'px');
 }
-
 window.addEventListener('resize', fixStickyHeader);
-
-// Also observe header size changes (badge row toggles change its height)
-if (window.ResizeObserver) {
-  new ResizeObserver(fixStickyHeader).observe(document.querySelector('header') || document.body);
-}
 
 
 
