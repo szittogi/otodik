@@ -669,7 +669,7 @@ function renderTable() {
     }
   }
 
-  updateBadges(rows.length);
+  try { updateBadges(rows.length); } catch(e) { console.error('updateBadges error:', e); }
 
   console.log('renderTable: rows to render:', rows.length, rows.map(r=>r.sku));
 
@@ -729,6 +729,7 @@ function applyUpsellFilter(sku) {
 ═══════════════════════════════════════════════ */
 function updateBadges(count) {
   const row = document.getElementById('badge-row');
+  if (!row) { console.error('badge-row not found!'); return; }
   row.innerHTML = '';
   const add = (label, val, cls='') => {
     const b = document.createElement('div');
