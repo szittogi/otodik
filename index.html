@@ -671,6 +671,8 @@ function renderTable() {
 
   updateBadges(rows.length);
 
+  console.log('renderTable: rows to render:', rows.length, rows.map(r=>r.sku));
+
   if (!rows.length) {
     container.innerHTML = '<div class="empty">Nincs találat.</div>';
     return;
