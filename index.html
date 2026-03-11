@@ -31,6 +31,8 @@
       background: var(--surface);
       flex-wrap: wrap;
     }
+    /* thead sticks below header - JS sets exact top value */
+    thead { position: sticky; z-index: 10; }
     header .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); white-space: nowrap; }
 
     /* header controls */
@@ -540,7 +542,7 @@ function buildVisibleRows(arsor) {
       brutto,
       size      : info?.size  ?? '–',
       stock     : info?.stock ?? null,
-      upsellList: parseUpsellList(upStock || upPrice),
+      upsellList: parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean),
     });
   }
 
@@ -676,9 +678,7 @@ function renderTable() {
 
   container.innerHTML = '';
   container.appendChild(wrap);
-
-  // Re-measure header height (badge row may have changed)
-  setTimeout(updateHeaderHeight, 0);
+  requestAnimationFrame(fixStickyHeader);
 
   // Click: toggle upsell expand on chip click
   wrap.addEventListener('click', e => {
