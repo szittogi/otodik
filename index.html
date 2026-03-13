@@ -187,6 +187,17 @@
     tr.upsell-sub-end td { padding: 0; height: 4px; background: var(--upsell-hdr-bg); border-bottom: 2px solid var(--border); }
     tr.main-row.expanded { background: var(--upsell-exp-bg) !important; }
     tr.main-row.expanded td { border-bottom: none; }
+    /* Group border: left accent bar + top/side borders on expanded row */
+    tr.main-row.expanded td:first-child { border-left: 3px solid var(--accent2) !important; }
+    tr.main-row.expanded td { border-top: 1px solid var(--accent2) !important; }
+    tr.main-row.expanded td:last-child { border-right: 1px solid var(--accent2) !important; }
+    /* Upsell sub rows: continue the left + right border */
+    tr.upsell-sub td:first-child,
+    tr.upsell-sub-header td:first-child { border-left: 3px solid var(--accent2) !important; }
+    tr.upsell-sub td:last-child,
+    tr.upsell-sub-header td:last-child { border-right: 1px solid var(--accent2) !important; }
+    /* End row: close the bottom */
+    tr.upsell-sub-end td { border-left: 3px solid var(--accent2) !important; border-right: 1px solid var(--accent2) !important; border-bottom: 2px solid var(--accent2) !important; }
     .expand-arrow { display: inline-block; margin-right: 6px; font-size: 11px; color: var(--accent2); transition: transform .15s; }
     tr.main-row.expanded .expand-arrow { transform: rotate(90deg); }
 
@@ -225,7 +236,7 @@
 
     <!-- upsell clear btn removed -->
     <button class="btn" id="btn-clear-sku" style="display:none">Kereső ✕</button>
-    <button class="btn" id="btn-clear-all">Mindent töröl</button>
+    <button class="btn" id="btn-egyeni-vevo">Egyéni vevő</button>
     <span class="ctrl-label">Ár</span>
     <button class="btn toggle-active" id="btn-toggle-netto" onclick="toggleCol('netto')">Nettó</button>
     <button class="btn toggle-active" id="btn-toggle-brutto" onclick="toggleCol('brutto')">Bruttó</button>
@@ -820,7 +831,7 @@ function applyUpsellFilter(sku) {
 /* ═══════════════════════════════════════════════
    BADGES / INFO
 ═══════════════════════════════════════════════ */
-function updateBadges(count) {
+function updateBadges(count, customerOverride, arsorOverride) {
   const row = document.getElementById('badge-row');
   if (!row) return;
   row.innerHTML = '';
@@ -830,8 +841,10 @@ function updateBadges(count) {
     b.textContent = label + ': ' + val;
     row.appendChild(b);
   };
-  if (state.selectedCustomer) add('Vevő', state.selectedCustomer.name, 'ab');
-  if (state.activeArsor)      add('Árlista', state.activeArsor, 'ab');
+  const _custName  = customerOverride || state.selectedCustomer?.name;
+  const _arsorName = arsorOverride    || state.activeArsor;
+  if (_custName)  add('Vevő', _custName, 'ab');
+  if (_arsorName) add('Árlista', _arsorName, 'ab');
   if (state.skuFilter)        add('Kereső', state.skuFilter);
   const info = document.createElement('div');
   info.id = 'info-badge';
@@ -935,15 +948,11 @@ function initControls() {
     document.getElementById('table-container').style.setProperty('--tbl-font', sz + 'px');
   });
 
-  document.getElementById('btn-clear-all').addEventListener('click', () => {
-    state.selectedCustomer = null; state.activeArsor = null;
-    state.activeUpsellSKUs = null; state.skuFilter = ''; state.visibleRows = [];
-    expandedUpsells.clear();
-    document.getElementById('customer-input').value = '';
-    document.getElementById('sku-search').value = '';
-    document.getElementById('btn-clear-sku').style.display = 'none';
-    document.getElementById('table-container').innerHTML = '';
-    document.getElementById('badge-row').innerHTML = '';
+  document.getElementById('btn-egyeni-vevo').addEventListener('click', () => {
+    const target = state.customers.find(c => c.name === 'AdCar Team Kft.');
+    if (!target) { alert('AdCar Team Kft. nem található a vevők között.'); return; }
+    document.getElementById('customer-input').value = target.name;
+    selectCustomer(target);
   });
 }
 
