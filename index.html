@@ -12,19 +12,47 @@
       --surface:  #111520;
       --surface2: #181d2b;
       --border:   #252e45;
-      --accent:   #f0d060;
-      --accent2:  #3ef5b0;
+      --accent:   #c8a800;
+      --accent2:  #00b87a;
       --text:     #f0f4ff;
       --text-muted: #8a95b8;
       --danger:   #ff4f6e;
       --radius: 10px;
+      --tbl-font: 13px;
+      --th-bg:    #0e1120;
+      --th-color: var(--th-color);
+      --row-even: rgba(255,255,255,.018);
+      --row-hover:#1e2535;
+      --upsell-sub-bg: #1a2235;
+      --upsell-sub-border: #232e45;
+      --upsell-hdr-bg: #151f30;
+      --upsell-exp-bg: #111a2a;
+    }
+    :root.light {
+      --bg:       #f0f2f7;
+      --surface:  #ffffff;
+      --surface2: #e8ecf5;
+      --border:   #c8d0e0;
+      --accent:   #9a7800;
+      --accent2:  #007a52;
+      --text:     #0d1020;
+      --text-muted: #6070a0;
+      --danger:   #d0002a;
+      --th-bg:    #e0e6f0;
+      --th-color: #4a5878;
+      --row-even: rgba(0,0,0,.025);
+      --row-hover:#dce4f0;
+      --upsell-sub-bg: #e4eaf8;
+      --upsell-sub-border: #c8d0e0;
+      --upsell-hdr-bg: #d8e0f0;
+      --upsell-exp-bg: #edf0f8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: auto; }
-    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    html { height: 100%; }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
     header {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      flex-shrink: 0;
       border-bottom: 1px solid var(--border);
       padding: 14px 40px;
       display: flex; align-items: center; gap: 24px;
@@ -71,10 +99,12 @@
       white-space: nowrap; transition: all .15s;
     }
     .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.toggle-active { border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--accent); }
+    .btn.toggle-off { opacity: 0.4; }
 
     /* badge row */
     #badge-row {
-      width: 100%; padding: 6px 40px 0;
+      width: 100%; padding: 6px 40px 8px;
       display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 28px;
     }
     .badge {
@@ -93,7 +123,10 @@
     .error-box { background: color-mix(in srgb,var(--danger) 10%,transparent); border: 1px solid color-mix(in srgb,var(--danger) 30%,transparent); border-radius: var(--radius); padding: 16px 20px; color: var(--danger); font-size: 13px; margin: 20px 40px; white-space: pre-wrap; }
 
     /* main */
-    #app-main { padding-top: 130px; }
+    #app-loading { flex: 1; }
+    #app-error { flex-shrink: 0; }
+    #app-main { flex: 1; min-height: 0; overflow-y: auto; }
+    #table-container { font-size: var(--tbl-font); }
     .container { max-width: 1400px; margin: 0 auto; padding: 24px 40px; }
 
     /* table */
@@ -104,21 +137,28 @@
     th {
       padding: 12px 16px; text-align: left;
       font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
-      color: #5a6688; background: #0e1120; white-space: nowrap; border-bottom: 2px solid var(--border);
+      color: var(--th-color); background: var(--th-bg); white-space: nowrap; border-bottom: 2px solid var(--border);
     }
     tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr:nth-child(even) { background: rgba(255,255,255,.018); }
-    tbody tr:hover { background: #1e2535; }
-    td { padding: 14px 16px; vertical-align: middle; font-size: 14px; }
+    tbody tr:nth-child(even) { background: var(--row-even); }
+    tbody tr:hover { background: var(--row-hover); }
+    td { padding: 14px 16px; vertical-align: middle; font-size: var(--tbl-font); }
 
-    .sku-cell { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--text-muted); white-space: nowrap; }
-    .sku-cell.oos { color: var(--danger); opacity: .75; }
-    .name-cell { max-width: 460px; white-space: normal; font-weight: 700; font-size: 15px; color: var(--text); }
-    .size-cell { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    .stock-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); text-align: right; white-space: nowrap; }
-    .price-cell { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; color: var(--accent); text-align: right; white-space: nowrap; }
-    .price-cell.brutto { color: var(--text-muted); font-size: 13px; }
+    .sku-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .sku-cell.oos { color: var(--danger); }
+    .name-cell { max-width: 460px; white-space: normal; font-weight: 700; font-size: calc(var(--tbl-font) + 2px); color: var(--text); }
+    .size-cell { font-family: 'DM Mono', monospace; font-size: calc(var(--tbl-font) - 1px); color: var(--text-muted); white-space: nowrap; }
+    .stock-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 700; color: var(--text); text-align: right; white-space: nowrap; }
+    .stock-cell.oos { color: var(--danger); }
+    .price-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 600; color: var(--accent); text-align: right; white-space: nowrap; }
+    .price-cell.brutto { color: var(--text-muted); font-size: calc(var(--tbl-font) - 1px); }
+    .price-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .price-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); opacity: 0.6; line-height: 1; }
+    .price-amount { font-family: 'DM Mono', monospace; font-weight: 600; white-space: nowrap; }
+    .price-amount.netto  { font-size: var(--tbl-font); color: var(--accent); }
+    .price-amount.brutto { font-size: calc(var(--tbl-font) - 1px); color: var(--text-muted); }
+    td.price-col { text-align: right; vertical-align: middle; }
     .upsell-chip {
       display: inline-block; padding: 2px 8px; margin: 1px 2px;
       background: color-mix(in srgb, var(--accent2) 12%, transparent);
@@ -127,23 +167,25 @@
       color: var(--accent2); cursor: pointer; transition: background .15s; white-space: nowrap;
     }
     .upsell-chip:hover { background: color-mix(in srgb, var(--accent2) 28%, transparent); }
-    .btn-up { padding: 3px 9px; font-size: 11px; }
 
     /* upsell expand rows */
     .upsell-chip { cursor: pointer; }
-    tr.upsell-sub { background: #0e1525 !important; }
-    tr.upsell-sub td { padding: 10px 16px; border-bottom: 1px solid #1a2235; }
-    tr.upsell-sub td.sku-cell { color: var(--accent2); font-size: 12px; padding-left: 32px; }
-    tr.upsell-sub td.name-cell { font-size: 14px; font-weight: 600; color: #c8d0e8; }
+    tr.upsell-sub { background: var(--upsell-sub-bg) !important; }
+    tr.upsell-sub td { padding: 10px 16px; border-bottom: 1px solid var(--upsell-sub-border); }
+    tr.upsell-sub td.sku-cell { color: var(--accent2); font-size: calc(var(--tbl-font) - 1px); padding-left: 32px; }
+    tr.upsell-sub td.sku-cell.oos { color: var(--danger) !important; }
+    tr.upsell-sub td.name-cell { font-size: var(--tbl-font); font-weight: 600; color: var(--text); }
     tr.upsell-sub .price-cell { color: var(--accent2); }
     tr.upsell-sub .price-cell.brutto { color: #5a7060; }
+    tr.upsell-sub-header td { background: var(--upsell-hdr-bg) !important; }
+    tr.upsell-sub-end td { background: var(--upsell-hdr-bg) !important; }
     tr.upsell-sub-header td {
       padding: 5px 16px 4px 32px;
       font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
-      color: var(--accent2); background: #09121e; border-bottom: none;
+      color: var(--accent2); background: var(--upsell-hdr-bg); border-bottom: none;
     }
-    tr.upsell-sub-end td { padding: 0; height: 4px; background: #060a10; border-bottom: 2px solid var(--border); }
-    tr.main-row.expanded { background: #111a2a !important; }
+    tr.upsell-sub-end td { padding: 0; height: 4px; background: var(--upsell-hdr-bg); border-bottom: 2px solid var(--border); }
+    tr.main-row.expanded { background: var(--upsell-exp-bg) !important; }
     tr.main-row.expanded td { border-bottom: none; }
     .expand-arrow { display: inline-block; margin-right: 6px; font-size: 11px; color: var(--accent2); transition: transform .15s; }
     tr.main-row.expanded .expand-arrow { transform: rotate(90deg); }
@@ -151,7 +193,7 @@
     .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
 
     @media (max-width: 700px) {
-      header { padding: 12px 16px; }
+      header { padding: 10px 16px; }
       #badge-row { padding: 4px 16px 0; }
       .container { padding: 16px; }
     }
@@ -161,6 +203,14 @@
 
 <header id="main-header">
   <div class="logo">ÁRLISTA</div>
+  <button id="theme-toggle" onclick="toggleTheme()" style="
+    background:none; border:1px solid var(--border); border-radius:20px;
+    padding:5px 12px; cursor:pointer; font-family:'Syne',sans-serif;
+    font-size:11px; font-weight:700; letter-spacing:1px; color:var(--text-muted);
+    display:flex; align-items:center; gap:6px; transition:all .2s; white-space:nowrap;
+  ">
+    <span id="theme-icon">☀</span><span id="theme-label">LIGHT</span>
+  </button>
   <div class="header-controls">
     <span class="ctrl-label">Vevő</span>
     <div class="autocomplete-wrap">
@@ -174,8 +224,15 @@
     </div>
 
     <!-- upsell clear btn removed -->
-    <button class="btn" id="btn-clear-sku"    style="display:none">Kereső ✕</button>
+    <button class="btn" id="btn-clear-sku" style="display:none">Kereső ✕</button>
     <button class="btn" id="btn-clear-all">Mindent töröl</button>
+    <span class="ctrl-label">Ár</span>
+    <button class="btn toggle-active" id="btn-toggle-netto" onclick="toggleCol('netto')">Nettó</button>
+    <button class="btn toggle-active" id="btn-toggle-brutto" onclick="toggleCol('brutto')">Bruttó</button>
+    <button class="btn toggle-active" id="btn-toggle-webshop" onclick="toggleCol('webshop')">Webshop</button>
+    <span class="ctrl-label">Betűméret</span>
+    <input type="range" id="font-size-slider" min="10" max="20" value="13" style="width:80px;accent-color:var(--accent);cursor:pointer;">
+    <span id="font-size-val" style="font-size:11px;color:var(--text-muted);min-width:24px;">13px</span>
   </div>
   <div id="badge-row"></div>
 </header>
@@ -294,6 +351,40 @@ function splitLine(line, sep) {
 /* ═══════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════ */
+const colVisible = { netto: true, brutto: true, webshop: true };
+
+function toggleCol(col) {
+  colVisible[col] = !colVisible[col];
+  const btn = document.getElementById('btn-toggle-' + col);
+  btn.classList.toggle('toggle-active', colVisible[col]);
+  btn.classList.toggle('toggle-off',    !colVisible[col]);
+  // Show/hide webshop column header
+  const thW = document.getElementById('th-webshop');
+  if (thW) thW.style.display = colVisible.webshop ? '' : 'none';
+  if (state.visibleRows.length) renderTable();
+}
+
+function buildPriceCell(netto, brutto) {
+  const parts = [];
+  if (colVisible.netto  && formatPrice(netto)  !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">nettó</span><span class="price-amount netto">${formatPrice(netto)}</span></div>`);
+  if (colVisible.brutto && formatPrice(brutto) !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">bruttó</span><span class="price-amount brutto">${formatPrice(brutto)}</span></div>`);
+  if (!parts.length) return '<span style="color:var(--text-muted)">—</span>';
+  return parts.join('');
+}
+
+function buildWebshopCell(webshopNetto, webshopBrutto) {
+  if (!colVisible.webshop) return '';
+  const parts = [];
+  if (colVisible.netto  && formatPrice(webshopNetto)  !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">nettó</span><span class="price-amount netto" style="color:var(--accent2)">${formatPrice(webshopNetto)}</span></div>`);
+  if (colVisible.brutto && formatPrice(webshopBrutto) !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">bruttó</span><span class="price-amount brutto" style="color:var(--text-muted)">${formatPrice(webshopBrutto)}</span></div>`);
+  if (!parts.length) return '<span style="color:var(--text-muted)">—</span>';
+  return parts.join('');
+}
+
 const state = {
   customers        : [],
   priceRows        : [],
@@ -523,25 +614,47 @@ function buildVisibleRows(arsor) {
   const nettoKey  = rowKeys.find(k => /nett.*ár|nett.*ar|nettó|netto/i.test(k));
   const bruttoKey = rowKeys.find(k => /brutt.*ár|brutt.*ar|bruttó|brutto/i.test(k));
 
+  // Build webshop price lookup: normSKU → nettó ár from arsor11_webshop
+  const webshopRows = state.priceByArsor['arsor11_webshop'] || [];
+  const webshopMap = {};
+  if (webshopRows.length) {
+    const wSample = webshopRows[0];
+    const wKeys = Object.keys(wSample);
+    const wCodeKey   = wKeys.find(k => /^cikkszám$|^cikkszam$|^sku$/i.test(k.trim())) || wKeys.find(k => /cikkszam|sku/i.test(k)) || wKeys[0];
+    const wNettoKey  = wKeys.find(k => /nett.*ár|nett.*ar|nettó|netto/i.test(k));
+    const wBruttoKey = wKeys.find(k => /brutt.*ár|brutt.*ar|bruttó|brutto/i.test(k));
+    for (const wr of webshopRows) {
+      const wSKU = normalizeSKU(wr[wCodeKey]);
+      if (!wSKU) continue;
+      webshopMap[wSKU] = {
+        netto:  wNettoKey  ? (wr[wNettoKey]  ?? '') : (wr.__priceKey ? (wr[wr.__priceKey] ?? '') : ''),
+        brutto: wBruttoKey ? (wr[wBruttoKey] ?? '') : '',
+      };
+    }
+  }
+
   for (const row of priceRows) {
     const nSKU = normalizeSKU(row[codeKey]);
     if (!nSKU) continue;
 
     const netto  = nettoKey  ? (row[nettoKey]  ?? '') : (row.__priceKey ? (row[row.__priceKey] ?? '') : '');
     const brutto = bruttoKey ? (row[bruttoKey] ?? '') : '';
+    const webshop = webshopMap[nSKU] || { netto: '', brutto: '' };
 
     const info = state.stockMap[nSKU];
     const upStock = info?.upsell || '';
     const upPrice = upsellKey ? String(row[upsellKey]||'').trim() : '';
 
     state.visibleRows.push({
-      sku       : nSKU,
-      name      : String(row[nameKey]||'').trim(),
+      sku          : nSKU,
+      name         : String(row[nameKey]||'').trim(),
       netto,
       brutto,
-      size      : info?.size  ?? '–',
-      stock     : info?.stock ?? null,
-      upsellList: parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean),
+      webshopNetto : webshop.netto,
+      webshopBrutto: webshop.brutto,
+      size         : info?.size  ?? '–',
+      stock        : info?.stock ?? null,
+      upsellList   : parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean),
     });
   }
 
@@ -579,12 +692,11 @@ function makeMainRow(r, skuLookup) {
   tr.innerHTML = `
     <td class="sku-cell${oos ? ' oos' : ''}">${esc(r.sku)}</td>
     <td class="name-cell">${esc(r.name)}</td>
+    <td class="price-col">${buildPriceCell(r.netto, r.brutto)}</td>
+    <td class="price-col">${buildWebshopCell(r.webshopNetto, r.webshopBrutto)}</td>
     <td class="size-cell">${r.size && r.size !== '–' ? esc(r.size) : '—'}</td>
-    <td class="stock-cell">${r.stock === null ? '—' : r.stock}</td>
-    <td class="price-cell">${formatPrice(r.netto)}</td>
-    <td class="price-cell brutto">${formatPrice(r.brutto)}</td>
+    <td class="stock-cell${oos ? ' oos' : ''}">${r.stock === null ? '—' : r.stock}</td>
     <td>${upsellChips}</td>
-    <td><button class="btn btn-up" onclick="scrollToTop()">↑ Fel</button></td>
   `;
   return tr;
 }
@@ -599,21 +711,28 @@ function makeUpsellSubRows(parentSKU, upsellList, skuLookup) {
   hdr.innerHTML = `<td colspan="8">↳ Kapcsolódó termékek</td>`;
   frags.push(hdr);
 
-  for (const uSku of upsellList) {
+  // Sort upsell list by netto price descending
+  const sortedUpsellList = [...upsellList].sort((a, b) => {
+    const pa = parseFloat(String((skuLookup[a]?.netto) || '0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+    const pb = parseFloat(String((skuLookup[b]?.netto) || '0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+    return pb - pa;
+  });
+
+  for (const uSku of sortedUpsellList) {
     const u = skuLookup[uSku];
     const tr = document.createElement('tr');
     tr.className = 'upsell-sub';
     tr.dataset.upsellOf = parentSKU;
     if (u) {
-      const uoos = u.stock !== null && u.stock <= 0;
+      const uoos = u.stock === null || u.stock <= 0;
       tr.innerHTML = `
         <td class="sku-cell${uoos ? ' oos' : ''}">${esc(u.sku)}</td>
         <td class="name-cell">${esc(u.name)}</td>
+        <td class="price-col">${buildPriceCell(u.netto, u.brutto)}</td>
+        <td class="price-col">${buildWebshopCell(u.webshopNetto||'', u.webshopBrutto||'')}</td>
         <td class="size-cell">${u.size && u.size !== '–' ? esc(u.size) : '—'}</td>
-        <td class="stock-cell">${u.stock === null ? '—' : u.stock}</td>
-        <td class="price-cell">${formatPrice(u.netto)}</td>
-        <td class="price-cell brutto">${formatPrice(u.brutto)}</td>
-        <td></td><td></td>
+        <td class="stock-cell${uoos ? ' oos' : ''}">${u.stock === null ? '—' : u.stock}</td>
+        <td></td>
       `;
     } else {
       tr.innerHTML = `
@@ -666,8 +785,7 @@ function renderTable() {
 
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
-    <th>Cikkszám</th><th>Név</th><th>Méret</th><th>Készlet</th>
-    <th>Nettó ár</th><th>Bruttó ár</th><th>Upsell</th><th></th>
+    <th>Cikkszám</th><th>Név</th><th style="text-align:right">Ár</th><th id="th-webshop" style="text-align:right">Webshop ár</th><th>Méret</th><th>Készlet</th><th>Upsell</th>
   </tr></thead>`;
   table.appendChild(tbody);
 
@@ -809,6 +927,14 @@ function initControls() {
     btnSku.style.display = 'none';
     renderTable();
   });
+  const slider = document.getElementById('font-size-slider');
+  const sizeVal = document.getElementById('font-size-val');
+  slider.addEventListener('input', () => {
+    const sz = slider.value;
+    sizeVal.textContent = sz + 'px';
+    document.getElementById('table-container').style.setProperty('--tbl-font', sz + 'px');
+  });
+
   document.getElementById('btn-clear-all').addEventListener('click', () => {
     state.selectedCustomer = null; state.activeArsor = null;
     state.activeUpsellSKUs = null; state.skuFilter = ''; state.visibleRows = [];
@@ -821,7 +947,6 @@ function initControls() {
   });
 }
 
-function scrollToTop() { window.scrollTo(0, 0); }
 
 
 
@@ -829,6 +954,23 @@ function scrollToTop() { window.scrollTo(0, 0); }
 /* ═══════════════════════════════════════════════
    BOOTSTRAP
 ═══════════════════════════════════════════════ */
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('theme-icon').textContent  = isLight ? '☾' : '☀';
+  document.getElementById('theme-label').textContent = isLight ? 'DARK' : 'LIGHT';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+// Restore saved theme
+if (localStorage.getItem('theme') === 'light') {
+  document.documentElement.classList.add('light');
+  document.addEventListener('DOMContentLoaded', () => {
+    const icon  = document.getElementById('theme-icon');
+    const label = document.getElementById('theme-label');
+    if (icon)  icon.textContent  = '☾';
+    if (label) label.textContent = 'DARK';
+  });
+}
+
 async function init() {
   try {
     const [custRows, priceRows, sizeRows] = await Promise.all([
