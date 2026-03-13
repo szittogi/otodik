@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Árlista</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --bg:       #07090d;
+      --surface:  #111520;
+      --surface2: #181d2b;
+      --border:   #252e45;
+      --accent:   #c8a800;
+      --accent2:  #00b87a;
+      --text:     #f0f4ff;
+      --text-muted: #8a95b8;
+      --danger:   #ff4f6e;
+      --radius: 10px;
+      --tbl-font: 13px;
+      --th-bg:    #0e1120;
+      --th-color: var(--th-color);
+      --row-even: rgba(255,255,255,.018);
+      --row-hover:#1e2535;
+      --upsell-sub-bg: #1a2235;
+      --upsell-sub-border: #232e45;
+      --upsell-hdr-bg: #151f30;
+      --upsell-exp-bg: #111a2a;
+    }
+    :root.light {
+      --bg:       #f0f2f7;
+      --surface:  #ffffff;
+      --surface2: #e8ecf5;
+      --border:   #c8d0e0;
+      --accent:   #9a7800;
+      --accent2:  #007a52;
+      --text:     #0d1020;
+      --text-muted: #6070a0;
+      --danger:   #d0002a;
+      --th-bg:    #e0e6f0;
+      --th-color: #4a5878;
+      --row-even: rgba(0,0,0,.025);
+      --row-hover:#dce4f0;
+      --upsell-sub-bg: #e4eaf8;
+      --upsell-sub-border: #c8d0e0;
+      --upsell-hdr-bg: #d8e0f0;
+      --upsell-exp-bg: #edf0f8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
+
+    header {
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex; align-items: center; gap: 24px;
+      background: var(--surface);
+      flex-wrap: wrap;
+    }
+    header .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--accent); white-space: nowrap; }
+
+    /* header controls */
+    .header-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; }
+    .ctrl-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-wrap input {
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 600; width: 240px; transition: border-color .2s; outline: none;
+    }
+    .autocomplete-wrap input:focus { border-color: var(--accent); }
+    #customer-dropdown {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+      max-height: 260px; overflow-y: auto; z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5); display: none;
+    }
+    #customer-dropdown.open { display: block; }
+    .dd-item { padding: 9px 14px; cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .dd-item:last-child { border-bottom: none; }
+    .dd-item:hover, .dd-item.active { background: var(--accent); color: #000; }
+
+    .search-wrap { position: relative; }
+    .search-wrap::before { content: '⌕'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 16px; pointer-events: none; }
+    .search-wrap input {
+      padding: 8px 14px 8px 32px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: 'Syne', sans-serif;
+      font-size: 13px; width: 200px; transition: border-color .2s; outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--accent); }
+
+    .btn {
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text-muted); font-family: 'Syne', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: .5px; cursor: pointer;
+      white-space: nowrap; transition: all .15s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn.toggle-active { border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--accent); }
+    .btn.toggle-off { opacity: 0.4; }
+
+    /* badge row */
+    #badge-row {
+      width: 100%; padding: 6px 40px 8px;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: 28px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 11px; font-size: 11px; font-weight: 600; color: var(--text-muted);
+    }
+    .badge.ab { border-color: color-mix(in srgb, var(--accent) 50%, transparent); color: var(--accent); }
+    .badge.ub { border-color: color-mix(in srgb, var(--accent2) 50%, transparent); color: var(--accent2); }
+    #info-badge { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+
+    /* loading / error */
+    .loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: var(--text-muted); font-size: 14px; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: color-mix(in srgb,var(--danger) 10%,transparent); border: 1px solid color-mix(in srgb,var(--danger) 30%,transparent); border-radius: var(--radius); padding: 16px 20px; color: var(--danger); font-size: 13px; margin: 20px 40px; white-space: pre-wrap; }
+
+    /* main */
+    #app-loading { flex: 1; }
+    #app-error { flex-shrink: 0; }
+    #app-main { flex: 1; min-height: 0; overflow-y: auto; }
+    #table-container { font-size: var(--tbl-font); }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px 40px; }
+
+    /* table */
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { position: sticky; top: 0; z-index: 10; }
+    thead tr { border-bottom: 2px solid var(--border); }
+    th {
+      padding: 12px 16px; text-align: left;
+      font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--th-color); background: var(--th-bg); white-space: nowrap; border-bottom: 2px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:nth-child(even) { background: var(--row-even); }
+    tbody tr:hover { background: var(--row-hover); }
+    td { padding: 14px 16px; vertical-align: middle; font-size: var(--tbl-font); }
+
+    .sku-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 500; color: var(--text-muted); white-space: nowrap; }
+    .sku-cell.oos { color: var(--danger); }
+    .name-cell { max-width: 460px; white-space: normal; font-weight: 700; font-size: calc(var(--tbl-font) + 2px); color: var(--text); }
+    .size-cell { font-family: 'DM Mono', monospace; font-size: calc(var(--tbl-font) - 1px); color: var(--text-muted); white-space: nowrap; }
+    .stock-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 700; color: var(--text); text-align: right; white-space: nowrap; }
+    .stock-cell.oos { color: var(--danger); }
+    .price-cell { font-family: 'DM Mono', monospace; font-size: var(--tbl-font); font-weight: 600; color: var(--accent); text-align: right; white-space: nowrap; }
+    .price-cell.brutto { color: var(--text-muted); font-size: calc(var(--tbl-font) - 1px); }
+    .price-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .price-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); opacity: 0.6; line-height: 1; }
+    .price-amount { font-family: 'DM Mono', monospace; font-weight: 600; white-space: nowrap; }
+    .price-amount.netto  { font-size: var(--tbl-font); color: var(--accent); }
+    .price-amount.brutto { font-size: calc(var(--tbl-font) - 1px); color: var(--text-muted); }
+    td.price-col { text-align: right; vertical-align: middle; }
+    .upsell-chip {
+      display: inline-block; padding: 2px 8px; margin: 1px 2px;
+      background: color-mix(in srgb, var(--accent2) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent2) 35%, transparent);
+      border-radius: 4px; font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--accent2); cursor: pointer; transition: background .15s; white-space: nowrap;
+    }
+    .upsell-chip:hover { background: color-mix(in srgb, var(--accent2) 28%, transparent); }
+
+    /* upsell expand rows */
+    .upsell-chip { cursor: pointer; }
+    tr.upsell-sub { background: var(--upsell-sub-bg) !important; }
+    tr.upsell-sub td { padding: 10px 16px; border-bottom: 1px solid var(--upsell-sub-border); }
+    tr.upsell-sub td.sku-cell { color: var(--accent2); font-size: calc(var(--tbl-font) - 1px); padding-left: 32px; }
+    tr.upsell-sub td.sku-cell.oos { color: var(--danger) !important; }
+    tr.upsell-sub td.name-cell { font-size: var(--tbl-font); font-weight: 600; color: var(--text); }
+    tr.upsell-sub .price-cell { color: var(--accent2); }
+    tr.upsell-sub .price-cell.brutto { color: #5a7060; }
+    tr.upsell-sub-header td { background: var(--upsell-hdr-bg) !important; }
+    tr.upsell-sub-end td { background: var(--upsell-hdr-bg) !important; }
+    tr.upsell-sub-header td {
+      padding: 5px 16px 4px 32px;
+      font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--accent2); background: var(--upsell-hdr-bg); border-bottom: none;
+    }
+    tr.upsell-sub-end td { padding: 0; height: 4px; background: var(--upsell-hdr-bg); border-bottom: 2px solid var(--border); }
+    tr.main-row.expanded { background: var(--upsell-exp-bg) !important; }
+    tr.main-row.expanded td { border-bottom: none; }
+    .expand-arrow { display: inline-block; margin-right: 6px; font-size: 11px; color: var(--accent2); transition: transform .15s; }
+    tr.main-row.expanded .expand-arrow { transform: rotate(90deg); }
+
+    .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 700px) {
+      header { padding: 10px 16px; }
+      #badge-row { padding: 4px 16px 0; }
+      .container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header id="main-header">
+  <div class="logo">ÁRLISTA</div>
+  <button id="theme-toggle" onclick="toggleTheme()" style="
+    background:none; border:1px solid var(--border); border-radius:20px;
+    padding:5px 12px; cursor:pointer; font-family:'Syne',sans-serif;
+    font-size:11px; font-weight:700; letter-spacing:1px; color:var(--text-muted);
+    display:flex; align-items:center; gap:6px; transition:all .2s; white-space:nowrap;
+  ">
+    <span id="theme-icon">☀</span><span id="theme-label">LIGHT</span>
+  </button>
+  <div class="header-controls">
+    <span class="ctrl-label">Vevő</span>
+    <div class="autocomplete-wrap">
+      <input id="customer-input" type="text" placeholder="Keress vevőt…" autocomplete="off" />
+      <div id="customer-dropdown"></div>
+    </div>
+
+    <span class="ctrl-label">Cikkszám</span>
+    <div class="search-wrap">
+      <input id="sku-search" type="text" placeholder="pl. KR124…" />
+    </div>
+
+    <!-- upsell clear btn removed -->
+    <button class="btn" id="btn-clear-sku" style="display:none">Kereső ✕</button>
+    <button class="btn" id="btn-egyeni-vevo">Egyéni vevő</button>
+    <span class="ctrl-label">Ár</span>
+    <button class="btn toggle-active" id="btn-toggle-netto" onclick="toggleCol('netto')">Nettó</button>
+    <button class="btn toggle-active" id="btn-toggle-brutto" onclick="toggleCol('brutto')">Bruttó</button>
+    <button class="btn toggle-active" id="btn-toggle-webshop" onclick="toggleCol('webshop')">Webshop</button>
+    <span class="ctrl-label">Betűméret</span>
+    <input type="range" id="font-size-slider" min="10" max="20" value="13" style="width:80px;accent-color:var(--accent);cursor:pointer;">
+    <span id="font-size-val" style="font-size:11px;color:var(--text-muted);min-width:24px;">13px</span>
+  </div>
+  <div id="badge-row"></div>
+</header>
+
+<div id="app-loading" class="loading"><div class="spinner"></div> Adatok betöltése…</div>
+<div id="app-error"   class="error-box" style="display:none"></div>
+
+<div id="app-main" style="display:none">
+  <div class="container">
+    <div id="table-container"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CONFIG – URL-ek
+═══════════════════════════════════════════════ */
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  ADATFORRÁS URL-EK – itt cseréld le ha lejárnak             ║
+// ╚══════════════════════════════════════════════════════════════╝
+const URL_CUSTOMERS = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVm9WQ1NrbHF3a18yeWhRWWU1cGhtcmJpQlVDZkJKSEVxQlpoMVV6b0J4MTlEZXd4Ml8tc2RDelhJeUZNaG1nRW9hUXI2SVlxRmZVbVNBZ3J5S3NNclRFVXRXRi1acy05ZFlnckJKZUlwRjdJLW89';  // 1. Vevők + csoportok
+const URL_PRICES    = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVm1NMlh2T3BXVWU4NHUwZ3FtU1dabWZFVWQ4TE9nZm5SRHFic0xmcm52VndEX1pSWFlSbFd2ZWJKWHczb0FFeVF0dlZSZHhHTHY5NWV0cHl3U0VsNXVCRUc4UEUtVm1GaTVjUy1ZQlNHbnZkVXc9';  // 2. Termékek + árak csoportonként
+const URL_SIZES     = 'https://app.clouderp.hu/api/1/automatism/file-share/?s=Z0FBQUFBQnBzVnFERDIyRnhUWjhIRFlZQzBuOWZ0MVRBTW1HN1BWbFhzNEJBREZoeFRGYTBsSHh6b25YWFAzZ2xGeDZaMjhsakpTRGdxVjlYekxvbmdYMHhxU2I0M3JIRF9RaTBIMDFUOFFIZEk2MjF0b3JXUVU9';  // 3. Méretek + készlet
+
+/* ═══════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════ */
+function normalizeSKU(s) {
+  return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatPrice(val) {
+  if (!val && val !== 0) return '—';
+  const num = parseFloat(String(val).replace(/\s/g,'').replace(',','.'));
+  if (isNaN(num)) return esc(String(val));
+  return num.toLocaleString('hu-HU', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' Ft';
+}
+
+function toNum(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? null : n;
+}
+
+/* Find column value by flexible header matching */
+function findCol(row, candidates) {
+  for (const key of Object.keys(row)) {
+    const k = key.toLowerCase().replace(/[\s_\-]/g,'');
+    for (const c of candidates) {
+      if (k.includes(c.toLowerCase().replace(/[\s_\-]/g,''))) return row[key];
+    }
+  }
+  return undefined;
+}
+
+function parseUpsellList(str) {
+  return String(str || '').split(/[,;|\s]+/).map(s => normalizeSKU(s)).filter(Boolean);
+}
+
+/* ═══════════════════════════════════════════════
+   FETCH + PARSE EXCEL
+═══════════════════════════════════════════════ */
+async function fetchExcel(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' – ' + url.slice(-40));
+  const buffer = await res.arrayBuffer();
+  const bytes  = new Uint8Array(buffer);
+  const isXLSX = bytes[0] === 0x50 && bytes[1] === 0x4B;
+
+  if (isXLSX) {
+    const wb    = XLSX.read(buffer, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  }
+
+  // CSV fallback with encoding detection
+  for (const enc of ['utf-8','windows-1250','iso-8859-2']) {
+    try {
+      const text = new TextDecoder(enc, {fatal:true}).decode(buffer);
+      if ((text.match(/[a-zÀ-ž0-9 ;,.]/gi)||[]).length / text.slice(0,300).length > 0.6)
+        return parseCSV(text);
+    } catch(e) {}
+  }
+  return parseCSV(new TextDecoder('windows-1250').decode(buffer));
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  const sep = lines[0].includes(';') ? ';' : ',';
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = splitLine(line, sep);
+    const obj  = {};
+    headers.forEach((h,i) => { obj[h] = (vals[i]||'').trim().replace(/^"|"$/g,''); });
+    return obj;
+  });
+}
+
+function splitLine(line, sep) {
+  const r = []; let cur = '', inQ = false;
+  for (const c of line) {
+    if (c==='"') inQ=!inQ;
+    else if (c===sep && !inQ) { r.push(cur); cur=''; }
+    else cur+=c;
+  }
+  r.push(cur);
+  return r;
+}
+
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+const colVisible = { netto: true, brutto: true, webshop: true };
+let egyeniVevoMode = false;
+
+function toggleCol(col) {
+  colVisible[col] = !colVisible[col];
+  const btn = document.getElementById('btn-toggle-' + col);
+  btn.classList.toggle('toggle-active', colVisible[col]);
+  btn.classList.toggle('toggle-off',    !colVisible[col]);
+  // Show/hide webshop column header
+  const thW = document.getElementById('th-webshop');
+  if (thW) thW.style.display = colVisible.webshop ? '' : 'none';
+  if (state.visibleRows.length) renderTable();
+}
+
+function buildPriceCell(netto, brutto) {
+  const parts = [];
+  if (colVisible.netto  && formatPrice(netto)  !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">nettó</span><span class="price-amount netto">${formatPrice(netto)}</span></div>`);
+  if (colVisible.brutto && formatPrice(brutto) !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">bruttó</span><span class="price-amount brutto">${formatPrice(brutto)}</span></div>`);
+  if (!parts.length) return '<span style="color:var(--text-muted)">—</span>';
+  return parts.join('');
+}
+
+function buildWebshopCell(webshopNetto, webshopBrutto) {
+  if (!colVisible.webshop) return '';
+  const parts = [];
+  if (colVisible.netto  && formatPrice(webshopNetto)  !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">nettó</span><span class="price-amount netto" style="color:var(--accent2)">${formatPrice(webshopNetto)}</span></div>`);
+  if (colVisible.brutto && formatPrice(webshopBrutto) !== '—')
+    parts.push(`<div class="price-wrap"><span class="price-label">bruttó</span><span class="price-amount brutto" style="color:var(--text-muted)">${formatPrice(webshopBrutto)}</span></div>`);
+  if (!parts.length) return '<span style="color:var(--text-muted)">—</span>';
+  return parts.join('');
+}
+
+const state = {
+  customers        : [],
+  priceRows        : [],
+  sizeRows         : [],
+  // built indexes
+  stockMap         : {},   // normSKU → { size, stock, upsell }
+  priceByArsor     : {},   // arsorKey → [ priceRow ]
+  upsellIndex      : {},   // normSKU → Set<normSKU>
+  // UI
+  selectedCustomer : null,
+  activeArsor      : null,
+  visibleRows      : [],
+  activeUpsellSKUs : null,
+  skuFilter        : '',
+};
+
+/* ═══════════════════════════════════════════════
+   PARSE CUSTOMERS
+═══════════════════════════════════════════════ */
+function parseCustomers(rows) {
+  state.customers = [];
+  const sample = rows[0] || {};
+  const keys   = Object.keys(sample);
+
+  // Score columns to find name
+  function score(k) {
+    const vals = rows.slice(0,5).map(r => String(r[k]||''));
+    const avg  = vals.reduce((s,v)=>s+v.length,0)/vals.length;
+    const hasSpace = vals.some(v=>v.includes(' '));
+    const isNum = vals.every(v=>/^\d+$/.test(v));
+    return isNum ? -1 : avg + (hasSpace?20:0);
+  }
+
+  let nameKey = keys.find(k=> k==='Név') ||
+                keys.find(k=> /nev$|_nev|nev_|^nev$|name$|megnevezes/i.test(k)) ||
+                keys.slice().sort((a,b)=>score(b)-score(a))[0];
+
+  // Groups: find the column that holds group/csoport info
+  let groupKey = keys.find(k=> /csoport|group|kategor|pricegroup|ar.*csoport|arkategoria/i.test(k));
+  if (!groupKey) groupKey = keys.find(k=> k!==nameKey) || keys[0];
+
+
+  for (const row of rows) {
+    const name = String(row[nameKey]||'').trim();
+    if (!name) continue;
+    // groups field can hold multiple groups (comma/semicolon separated)
+    const rawGroup = String(row[groupKey]||'');
+    const groups   = rawGroup.split(/[,;|\n]+/).map(g=>g.trim()).filter(Boolean);
+    state.customers.push({ name, groups });
+  }
+  state.customers.sort((a,b)=>a.name.localeCompare(b.name,'hu'));
+}
+
+/* ═══════════════════════════════════════════════
+   PARSE PRICELIST
+═══════════════════════════════════════════════ */
+function parsePricelist(rows) {
+  state.priceByArsor = {};
+  if (!rows.length) return;
+
+  const keys = Object.keys(rows[0]);
+
+  // Cikkszám
+  const codeKey =
+    keys.find(k => /^cikkszám$|^cikkszam$|^sku$|^kod$|^code$/i.test(k.trim())) ||
+    keys.find(k => /cikkszam|cikk_szam|sku|item.?code/i.test(k)) ||
+    keys[0];
+
+  // Név
+  const nameKey =
+    keys.find(k => /^cikknév$|^cikknev$|^név$|^nev$|^name$/i.test(k.trim())) ||
+    keys.find(k => /megnevezes|megnevez|leiras|termek.?nev/i.test(k)) ||
+    keys.filter(k => k !== codeKey).sort((a, b) => {
+      const avg = key => rows.slice(0, 10).reduce((s, r) => s + String(r[key] || '').length, 0);
+      return avg(b) - avg(a);
+    })[0] || keys[1] || keys[0];
+
+  // Upsell
+  const upsellKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
+
+  // Ár oszlop: Nettó ár, Bruttó ár, ár, price stb.
+  const priceKey =
+    keys.find(k => /^nettó\s*ár$|^netto\s*ar$/i.test(k.trim())) ||
+    keys.find(k => /^bruttó\s*ár$|^brutto\s*ar$/i.test(k.trim())) ||
+    keys.find(k => /nett.*ár|nett.*ar|netto/i.test(k)) ||
+    keys.find(k => /brut.*ár|brut.*ar|brutto/i.test(k)) ||
+    keys.find(k => /^ár$|^ar$|^price$|egységár|egysegar/i.test(k.trim())) ||
+    keys.find(k => /ár|price/i.test(k) && k !== codeKey && k !== nameKey);
+
+  // Arsor oszlop: értékei "arsor"-ral kezdődnek (pl. "Árlista" nevű oszlop)
+  let arsorKey = null;
+  for (const k of keys) {
+    const hits = rows.slice(0, 30).filter(r => String(r[k] || '').toLowerCase().startsWith('arsor')).length;
+    if (hits >= 2) { arsorKey = k; break; }
+  }
+
+  // Arsor oszlopok a fejlécben
+  const arsorColKeys = keys.filter(k => k.trim().toLowerCase().startsWith('arsor'));
+
+  for (const row of rows) {
+    const rawCode = String(row[codeKey] || '').trim();
+    if (!rawCode) continue;
+
+    if (arsorKey) {
+      // Sor-szintű arsor érték (pl. "Árlista" oszlop = "arsor01_akku_xado_nagyker")
+      const arsor = String(row[arsorKey] || '').trim().toLowerCase();
+      if (!arsor) continue;
+      if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+      state.priceByArsor[arsor].push({ ...row, __priceKey: priceKey });
+    } else if (arsorColKeys.length) {
+      // Fejléc-szintű arsor oszlopok
+      for (const pk of arsorColKeys) {
+        const arsor = pk.trim().toLowerCase();
+        if (!state.priceByArsor[arsor]) state.priceByArsor[arsor] = [];
+        state.priceByArsor[arsor].push({ ...row, __priceKey: pk });
+      }
+    } else {
+      // Fallback egyetlen árlista
+      if (!state.priceByArsor['__default__']) state.priceByArsor['__default__'] = [];
+      state.priceByArsor['__default__'].push({ ...row, __priceKey: priceKey });
+    }
+  }
+
+  state._priceMeta = { codeKey, nameKey, upsellKey, priceKey };
+}
+
+/* ═══════════════════════════════════════════════
+   PARSE STOCK / SIZE
+═══════════════════════════════════════════════ */
+function parseStockSize(rows) {
+  state.stockMap = {};
+  if (!rows.length) return;
+  const keys = Object.keys(rows[0]);
+
+  // Cikkszám – exact first
+  const codeKey =
+    keys.find(k => /^cikkszam$|^cikkszám$|^sku$|^kod$|^code$/i.test(k.trim())) ||
+    keys.find(k => /cikkszam|cikk_szam|sku|item/i.test(k)) ||
+    keys[0];
+
+  // Méret – exact "Méret" first, then patterns; skip columns with "Készlet" in name
+  const sizeKey =
+    keys.find(k => /^méret$|^meret$/i.test(k.trim())) ||
+    keys.find(k => /méret|meret|size/i.test(k) && !/keszlet|készlet/i.test(k));
+
+  // Készleten – exact "Készleten" first
+  const stockKey =
+    keys.find(k => /^készleten$|^keszleten$/i.test(k.trim())) ||
+    keys.find(k => /készleten|keszleten/i.test(k)) ||
+    keys.find(k => /keszlet|készlet|stock|qty|mennyiseg|db|pieces|quantity/i.test(k));
+
+  const upKey = keys.find(k => /upsell|kapcsolt|related/i.test(k));
+
+  for (const row of rows) {
+    const nSKU = normalizeSKU(row[codeKey]);
+    if (!nSKU) continue;
+    let rawSize = sizeKey ? String(row[sizeKey] || '').trim() : '–';
+    rawSize = rawSize.replace(/^m[eé]retei?\s*\([^)]*\)\s*[-–]\s*/i, '').trim() || '–';
+    state.stockMap[nSKU] = {
+      size  : rawSize,
+      stock : stockKey ? toNum(row[stockKey]) : null,
+      upsell: upKey    ? String(row[upKey] || '').trim() : '',
+    };
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   UPSELL INDEX (BFS connected components)
+═══════════════════════════════════════════════ */
+function buildUpsellIndex(priceRows) {
+  state.upsellIndex = {};
+  const edges = {};
+  const add = (a, b) => {
+    if (!edges[a]) edges[a] = new Set();
+    if (!edges[b]) edges[b] = new Set();
+    edges[a].add(b); edges[b].add(a);
+  };
+  const { upsellKey } = state._priceMeta;
+  const { codeKey }   = state._priceMeta;
+
+  for (const row of priceRows) {
+    const nSKU = normalizeSKU(row[codeKey]);
+    if (!nSKU) continue;
+    const up = upsellKey ? String(row[upsellKey]||'').trim() : '';
+    parseUpsellList(up).forEach(u => add(nSKU, u));
+  }
+  for (const [nSKU, info] of Object.entries(state.stockMap)) {
+    parseUpsellList(info.upsell).forEach(u => add(nSKU, u));
+  }
+
+  const visited = new Set();
+  for (const sku of Object.keys(edges)) {
+    if (visited.has(sku)) continue;
+    const comp = new Set();
+    const q = [sku];
+    while (q.length) {
+      const cur = q.pop();
+      if (comp.has(cur)) continue;
+      comp.add(cur);
+      (edges[cur]||new Set()).forEach(n => { if (!comp.has(n)) q.push(n); });
+    }
+    comp.forEach(s => { visited.add(s); state.upsellIndex[s] = comp; });
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   GET ARSOR GROUP FOR CUSTOMER
+═══════════════════════════════════════════════ */
+function getArsorGroup(customer) {
+  for (const g of customer.groups) {
+    if (g.toLowerCase().startsWith('arsor')) return g.toLowerCase();
+  }
+  return null;
+}
+
+/* ═══════════════════════════════════════════════
+   BUILD VISIBLE ROWS
+═══════════════════════════════════════════════ */
+function buildVisibleRows(arsor) {
+  const { codeKey, nameKey, upsellKey } = state._priceMeta;
+  const priceRows = state.priceByArsor[arsor] || [];
+  state.visibleRows = [];
+
+  // Find nettó + bruttó keys from any row
+  const sampleRow = priceRows[0] || {};
+  const rowKeys = Object.keys(sampleRow);
+  const nettoKey  = rowKeys.find(k => /nett.*ár|nett.*ar|nettó|netto/i.test(k));
+  const bruttoKey = rowKeys.find(k => /brutt.*ár|brutt.*ar|bruttó|brutto/i.test(k));
+
+  // Build webshop price lookup: normSKU → nettó ár from arsor11_webshop
+  const webshopRows = state.priceByArsor['arsor11_webshop'] || [];
+  const webshopMap = {};
+  if (webshopRows.length) {
+    const wSample = webshopRows[0];
+    const wKeys = Object.keys(wSample);
+    const wCodeKey   = wKeys.find(k => /^cikkszám$|^cikkszam$|^sku$/i.test(k.trim())) || wKeys.find(k => /cikkszam|sku/i.test(k)) || wKeys[0];
+    const wNettoKey  = wKeys.find(k => /nett.*ár|nett.*ar|nettó|netto/i.test(k));
+    const wBruttoKey = wKeys.find(k => /brutt.*ár|brutt.*ar|bruttó|brutto/i.test(k));
+    for (const wr of webshopRows) {
+      const wSKU = normalizeSKU(wr[wCodeKey]);
+      if (!wSKU) continue;
+      webshopMap[wSKU] = {
+        netto:  wNettoKey  ? (wr[wNettoKey]  ?? '') : (wr.__priceKey ? (wr[wr.__priceKey] ?? '') : ''),
+        brutto: wBruttoKey ? (wr[wBruttoKey] ?? '') : '',
+      };
+    }
+  }
+
+  for (const row of priceRows) {
+    const nSKU = normalizeSKU(row[codeKey]);
+    if (!nSKU) continue;
+
+    const netto  = nettoKey  ? (row[nettoKey]  ?? '') : (row.__priceKey ? (row[row.__priceKey] ?? '') : '');
+    const brutto = bruttoKey ? (row[bruttoKey] ?? '') : '';
+    const webshop = webshopMap[nSKU] || { netto: '', brutto: '' };
+
+    const info = state.stockMap[nSKU];
+    const upStock = info?.upsell || '';
+    const upPrice = upsellKey ? String(row[upsellKey]||'').trim() : '';
+
+    state.visibleRows.push({
+      sku          : nSKU,
+      name         : String(row[nameKey]||'').trim(),
+      netto,
+      brutto,
+      webshopNetto : webshop.netto,
+      webshopBrutto: webshop.brutto,
+      size         : info?.size  ?? '–',
+      stock        : info?.stock ?? null,
+      upsellList   : parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean),
+    });
+  }
+
+  buildUpsellIndex(priceRows);
+}
+
+/* ═══════════════════════════════════════════════
+   RENDER TABLE
+═══════════════════════════════════════════════ */
+
+// Tracks which main-row SKUs have their upsell panel open
+const expandedUpsells = new Set();
+
+// Build a lookup: normSKU → full row data (for upsell sub-rows)
+function buildSkuLookup(rows) {
+  const map = {};
+  for (const r of rows) map[r.sku] = r;
+  return map;
+}
+
+function makeMainRow(r, skuLookup) {
+  const oos = r.stock !== null && r.stock <= 0;
+  const hasUpsell = r.upsellList.length > 0;
+  const isOpen = expandedUpsells.has(r.sku);
+
+  const upsellChips = hasUpsell
+    ? r.upsellList.map(u =>
+        `<span class="upsell-chip" data-upsell="${esc(u)}" data-parent="${esc(r.sku)}">${esc(u)}</span>`
+      ).join('')
+    : '—';
+
+  const tr = document.createElement('tr');
+  tr.className = 'main-row' + (isOpen ? ' expanded' : '');
+  tr.dataset.sku = r.sku;
+  tr.innerHTML = `
+    <td class="sku-cell${oos ? ' oos' : ''}">${esc(r.sku)}</td>
+    <td class="name-cell">${esc(r.name)}</td>
+    <td class="price-col">${buildPriceCell(r.netto, r.brutto)}</td>
+    <td class="price-col">${buildWebshopCell(r.webshopNetto, r.webshopBrutto)}</td>
+    <td class="size-cell">${r.size && r.size !== '–' ? esc(r.size) : '—'}</td>
+    <td class="stock-cell${oos ? ' oos' : ''}">${r.stock === null ? '—' : r.stock}</td>
+    <td>${upsellChips}</td>
+  `;
+  return tr;
+}
+
+function makeUpsellSubRows(parentSKU, upsellList, skuLookup) {
+  const frags = [];
+
+  // Header row
+  const hdr = document.createElement('tr');
+  hdr.className = 'upsell-sub-header';
+  hdr.dataset.upsellOf = parentSKU;
+  hdr.innerHTML = `<td colspan="8">↳ Kapcsolódó termékek</td>`;
+  frags.push(hdr);
+
+  // Sort upsell list by netto price descending
+  const sortedUpsellList = [...upsellList].sort((a, b) => {
+    const pa = parseFloat(String((skuLookup[a]?.netto) || '0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+    const pb = parseFloat(String((skuLookup[b]?.netto) || '0').replace(/[^0-9.,]/g,'').replace(',','.')) || 0;
+    return pb - pa;
+  });
+
+  for (const uSku of sortedUpsellList) {
+    const u = skuLookup[uSku];
+    const tr = document.createElement('tr');
+    tr.className = 'upsell-sub';
+    tr.dataset.upsellOf = parentSKU;
+    if (u) {
+      const uoos = u.stock === null || u.stock <= 0;
+      tr.innerHTML = `
+        <td class="sku-cell${uoos ? ' oos' : ''}">${esc(u.sku)}</td>
+        <td class="name-cell">${esc(u.name)}</td>
+        <td class="price-col">${buildPriceCell(u.netto, u.brutto)}</td>
+        <td class="price-col">${buildWebshopCell(u.webshopNetto||'', u.webshopBrutto||'')}</td>
+        <td class="size-cell">${u.size && u.size !== '–' ? esc(u.size) : '—'}</td>
+        <td class="stock-cell${uoos ? ' oos' : ''}">${u.stock === null ? '—' : u.stock}</td>
+        <td></td>
+      `;
+    } else {
+      tr.innerHTML = `
+        <td class="sku-cell">${esc(uSku)}</td>
+        <td class="name-cell" style="color:var(--text-muted);font-style:italic">Nincs az árlistában</td>
+        <td colspan="6"></td>
+      `;
+    }
+    frags.push(tr);
+  }
+
+  // Closing spacer
+  const end = document.createElement('tr');
+  end.className = 'upsell-sub-end';
+  end.dataset.upsellOf = parentSKU;
+  end.innerHTML = '<td colspan="8"></td>';
+  frags.push(end);
+
+  return frags;
+}
+
+function renderTable() {
+  const container = document.getElementById('table-container');
+  let rows = state.visibleRows;
+
+  if (state.skuFilter) {
+    const q = normalizeSKU(state.skuFilter);
+    const before = rows.length;
+    rows = rows.filter(r => r.sku.includes(q));
+  }
+
+  updateBadges(rows.length);
+
+
+  if (!rows.length) {
+    container.innerHTML = '<div class="empty">Nincs találat.</div>';
+    return;
+  }
+
+  const skuLookup = buildSkuLookup(state.visibleRows);
+
+  const tbody = document.createElement('tbody');
+  for (const r of rows) {
+    tbody.appendChild(makeMainRow(r, skuLookup));
+    // If this row's upsell is expanded, insert sub-rows immediately after
+    if (expandedUpsells.has(r.sku) && r.upsellList.length) {
+      makeUpsellSubRows(r.sku, r.upsellList, skuLookup).forEach(tr => tbody.appendChild(tr));
+    }
+  }
+
+  const table = document.createElement('table');
+  table.innerHTML = `<thead><tr>
+    <th>Cikkszám</th><th>Név</th><th style="text-align:right">Ár</th><th id="th-webshop" style="text-align:right">Webshop ár</th><th>Méret</th><th>Készlet</th><th>Upsell</th>
+  </tr></thead>`;
+  table.appendChild(tbody);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'table-wrap';
+  wrap.appendChild(table);
+
+  container.innerHTML = '';
+  container.appendChild(wrap);
+
+  // Click: toggle upsell expand on chip click
+  wrap.addEventListener('click', e => {
+    const chip = e.target.closest('.upsell-chip');
+    if (!chip) return;
+    const parentSKU = chip.dataset.parent;
+    if (expandedUpsells.has(parentSKU)) {
+      expandedUpsells.delete(parentSKU);
+    } else {
+      expandedUpsells.add(parentSKU);
+    }
+    renderTable();
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   UPSELL FILTER (badge clear still works)
+═══════════════════════════════════════════════ */
+function applyUpsellFilter(sku) {
+  // No longer used for full-page filter; kept for badge clear compatibility
+}
+
+/* ═══════════════════════════════════════════════
+   BADGES / INFO
+═══════════════════════════════════════════════ */
+function updateBadges(count, customerOverride, arsorOverride) {
+  const row = document.getElementById('badge-row');
+  if (!row) return;
+  row.innerHTML = '';
+  const add = (label, val, cls='') => {
+    const b = document.createElement('div');
+    b.className = 'badge ' + cls;
+    b.textContent = label + ': ' + val;
+    row.appendChild(b);
+  };
+  const _custName  = customerOverride || state.selectedCustomer?.name;
+  const _arsorName = arsorOverride    || state.activeArsor;
+  if (_custName)  add('Vevő', _custName, 'ab');
+  if (_arsorName) add('Árlista', _arsorName, 'ab');
+  if (state.skuFilter)        add('Kereső', state.skuFilter);
+  const info = document.createElement('div');
+  info.id = 'info-badge';
+  info.textContent = count + ' termék';
+  row.appendChild(info);
+  // Re-measure after badge row content changes header height
+}
+
+/* ═══════════════════════════════════════════════
+   CUSTOMER AUTOCOMPLETE
+═══════════════════════════════════════════════ */
+function initCustomerAutocomplete() {
+  const input = document.getElementById('customer-input');
+  const dd    = document.getElementById('customer-dropdown');
+  let idx = -1;
+
+  const show = items => {
+    dd.innerHTML = ''; idx = -1;
+    if (!items.length) { dd.classList.remove('open'); return; }
+    items.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'dd-item';
+      div.textContent = c.name;
+      div.addEventListener('mousedown', () => selectCustomer(c));
+      dd.appendChild(div);
+    });
+    dd.classList.add('open');
+  };
+
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    show((q ? state.customers.filter(c=>c.name.toLowerCase().includes(q)) : state.customers).slice(0,60));
+  });
+  input.addEventListener('focus', () => show(state.customers.slice(0,60)));
+  input.addEventListener('blur',  () => setTimeout(()=>dd.classList.remove('open'), 160));
+  input.addEventListener('keydown', e => {
+    const items = dd.querySelectorAll('.dd-item');
+    if      (e.key==='ArrowDown') { idx=Math.min(idx+1,items.length-1); hl(items); e.preventDefault(); }
+    else if (e.key==='ArrowUp')   { idx=Math.max(idx-1,0); hl(items); e.preventDefault(); }
+    else if (e.key==='Enter' && idx>=0) items[idx]?.dispatchEvent(new MouseEvent('mousedown'));
+    else if (e.key==='Escape') dd.classList.remove('open');
+  });
+  const hl = items => {
+    items.forEach((el,i)=>el.classList.toggle('active',i===idx));
+    items[idx]?.scrollIntoView({block:'nearest'});
+  };
+}
+
+function selectCustomer(c) {
+  state.selectedCustomer = c;
+  state.activeUpsellSKUs = null;
+  state.skuFilter = '';
+  document.getElementById('customer-input').value = c.name;
+  document.getElementById('sku-search').value = '';
+  expandedUpsells.clear();
+  document.getElementById('btn-clear-sku').style.display = 'none';
+
+  const arsor = getArsorGroup(c);
+  state.activeArsor = arsor;
+
+  if (!arsor) {
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">A vevőhöz nem tartozik <em>arsor…</em> csoport.<br>Csoportok: ' + esc(c.groups.join(', ') || '(üres)') + '</div>';
+    updateBadges(0); return;
+  }
+  if (!state.priceByArsor[arsor]) {
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">Nincs árlista a(z) <strong>' + esc(arsor) + '</strong> csoporthoz.<br>Elérhető árlisták: ' + esc(Object.keys(state.priceByArsor).join(', ') || '(nincs)') + '</div>';
+    updateBadges(0); return;
+  }
+
+  buildVisibleRows(arsor);
+  renderTable();
+}
+
+/* ═══════════════════════════════════════════════
+   SKU SEARCH + CLEAR BUTTONS
+═══════════════════════════════════════════════ */
+function initControls() {
+  const skuInput = document.getElementById('sku-search');
+  const btnSku   = document.getElementById('btn-clear-sku');
+
+  skuInput.addEventListener('input', () => {
+    state.skuFilter = skuInput.value.trim();
+    btnSku.style.display = state.skuFilter ? '' : 'none';
+    if (state.selectedCustomer && state.activeArsor) renderTable();
+    else updateBadges(0);
+  });
+
+  // btn-clear-upsell removed from HTML; expandedUpsells cleared via btn-clear-all
+  btnSku.addEventListener('click', () => {
+    state.skuFilter = ''; skuInput.value = '';
+    btnSku.style.display = 'none';
+    renderTable();
+  });
+  const slider = document.getElementById('font-size-slider');
+  const sizeVal = document.getElementById('font-size-val');
+  slider.addEventListener('input', () => {
+    const sz = slider.value;
+    sizeVal.textContent = sz + 'px';
+    document.getElementById('table-container').style.setProperty('--tbl-font', sz + 'px');
+  });
+
+  document.getElementById('btn-egyeni-vevo').addEventListener('click', () => {
+    egyeniVevoMode = !egyeniVevoMode;
+    const btn = document.getElementById('btn-egyeni-vevo');
+    if (egyeniVevoMode) {
+      // Turn on: clear customer, show only webshop col, load webshop rows
+      state.selectedCustomer = null; state.activeArsor = null;
+      state.activeUpsellSKUs = null; state.skuFilter = '';
+      expandedUpsells.clear();
+      document.getElementById('customer-input').value = '';
+      document.getElementById('sku-search').value = '';
+      document.getElementById('btn-clear-sku').style.display = 'none';
+      // Force col visibility: only webshop
+      colVisible.netto   = false; colVisible.brutto  = false; colVisible.webshop = true;
+      document.getElementById('btn-toggle-netto').classList.remove('toggle-active');
+      document.getElementById('btn-toggle-netto').classList.add('toggle-off');
+      document.getElementById('btn-toggle-brutto').classList.remove('toggle-active');
+      document.getElementById('btn-toggle-brutto').classList.add('toggle-off');
+      document.getElementById('btn-toggle-webshop').classList.add('toggle-active');
+      document.getElementById('btn-toggle-webshop').classList.remove('toggle-off');
+      document.getElementById('th-webshop').style.display = '';
+      btn.classList.add('toggle-active');
+      // Build rows from arsor11_webshop directly
+      buildVisibleRows('arsor11_webshop');
+      updateBadges(state.visibleRows.length, 'Egyéni vevő', 'arsor11_webshop');
+      renderTable();
+    } else {
+      // Turn off: restore col toggles, clear table
+      colVisible.netto = true; colVisible.brutto = true;
+      document.getElementById('btn-toggle-netto').classList.add('toggle-active');
+      document.getElementById('btn-toggle-netto').classList.remove('toggle-off');
+      document.getElementById('btn-toggle-brutto').classList.add('toggle-active');
+      document.getElementById('btn-toggle-brutto').classList.remove('toggle-off');
+      state.visibleRows = [];
+      expandedUpsells.clear();
+      btn.classList.remove('toggle-active');
+      document.getElementById('table-container').innerHTML = '';
+      document.getElementById('badge-row').innerHTML = '';
+    }
+  });
+}
+
+
+
+
+
+/* ═══════════════════════════════════════════════
+   BOOTSTRAP
+═══════════════════════════════════════════════ */
+function toggleTheme() {
+  const isLight = document.documentElement.classList.toggle('light');
+  document.getElementById('theme-icon').textContent  = isLight ? '☾' : '☀';
+  document.getElementById('theme-label').textContent = isLight ? 'DARK' : 'LIGHT';
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+}
+// Restore saved theme
+if (localStorage.getItem('theme') === 'light') {
+  document.documentElement.classList.add('light');
+  document.addEventListener('DOMContentLoaded', () => {
+    const icon  = document.getElementById('theme-icon');
+    const label = document.getElementById('theme-label');
+    if (icon)  icon.textContent  = '☾';
+    if (label) label.textContent = 'DARK';
+  });
+}
+
+async function init() {
+  try {
+    const [custRows, priceRows, sizeRows] = await Promise.all([
+      fetchExcel(URL_CUSTOMERS),
+      fetchExcel(URL_PRICES),
+      fetchExcel(URL_SIZES),
+    ]);
+
+    parseCustomers(custRows);
+    parsePricelist(priceRows);
+    parseStockSize(sizeRows);
+
+    document.getElementById('app-loading').style.display = 'none';
+    document.getElementById('app-main').style.display    = '';
+
+
+    initCustomerAutocomplete();
+    initControls();
+
+    document.getElementById('table-container').innerHTML =
+      '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
+    updateBadges(0);
+  } catch(e) {
+    document.getElementById('app-loading').style.display = 'none';
+    const err = document.getElementById('app-error');
+    err.style.display = 'block';
+    err.textContent   = '⚠ Hiba: ' + e.message;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
