@@ -854,7 +854,10 @@ function renderTable() {
     const parentSKU = chip.dataset.parent;
     if (expandedUpsells.has(parentSKU)) expandedUpsells.delete(parentSKU);
     else expandedUpsells.add(parentSKU);
+    const scroller = document.getElementById('app-main');
+    const savedScroll = scroller ? scroller.scrollTop : 0;
     renderTable();
+    requestAnimationFrame(() => { if (scroller) scroller.scrollTop = savedScroll; });
   });
 
   // Chunked append
