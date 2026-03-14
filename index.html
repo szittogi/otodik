@@ -317,6 +317,39 @@ function parseUpsellList(str) {
 /* ═══════════════════════════════════════════════
    FETCH + PARSE EXCEL
 ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   CACHE  (localStorage, 1 órás lejárat)
+═══════════════════════════════════════════════ */
+const CACHE_TTL = 60 * 60 * 1000; // 1 óra ms-ben
+
+function cacheSet(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch(e) { /* quota exceeded – skip */ }
+}
+
+function cacheGet(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > CACHE_TTL) { localStorage.removeItem(key); return null; }
+    return data;
+  } catch(e) { return null; }
+}
+
+function cacheClear() {
+  ['cache_customers','cache_prices','cache_sizes'].forEach(k => localStorage.removeItem(k));
+}
+
+async function fetchExcelCached(url, cacheKey) {
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+  const rows = await fetchExcel(url);
+  cacheSet(cacheKey, rows);
+  return rows;
+}
+
 async function fetchExcel(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error('HTTP ' + res.status + ' – ' + url.slice(-40));
@@ -982,6 +1015,33 @@ function initControls() {
 /* ═══════════════════════════════════════════════
    BOOTSTRAP
 ═══════════════════════════════════════════════ */
+function showCacheBadge(stale) {
+  let el = document.getElementById('cache-badge');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cache-badge';
+    el.style.cssText = 'font-size:10px;font-family:Syne,sans-serif;font-weight:700;letter-spacing:.5px;padding:3px 8px;border-radius:10px;cursor:pointer;transition:all .3s;';
+    el.title = 'Gyorsítótárból betöltve – kattints a frissítéshez';
+    el.onclick = () => { cacheClear(); location.reload(); };
+    // Insert into badge-row area
+    const hdr = document.getElementById('main-header');
+    if (hdr) hdr.appendChild(el);
+  }
+  if (stale) {
+    el.textContent = '⚡ Cache · Frissítés…';
+    el.style.background = 'rgba(200,168,0,.15)';
+    el.style.color = 'var(--accent)';
+    el.style.border = '1px solid rgba(200,168,0,.3)';
+    el.style.display = '';
+  } else {
+    el.textContent = '✓ Frissítve';
+    el.style.background = 'rgba(0,180,100,.1)';
+    el.style.color = 'var(--accent2)';
+    el.style.border = '1px solid rgba(0,180,100,.25)';
+    setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+  }
+}
+
 function toggleTheme() {
   const isLight = document.documentElement.classList.toggle('light');
   document.getElementById('theme-icon').textContent  = isLight ? '☾' : '☀';
@@ -1000,27 +1060,60 @@ if (localStorage.getItem('theme') === 'light') {
 }
 
 async function init() {
-  try {
-    const [custRows, priceRows, sizeRows] = await Promise.all([
-      fetchExcel(URL_CUSTOMERS),
-      fetchExcel(URL_PRICES),
-      fetchExcel(URL_SIZES),
-    ]);
+  // ── Check if we have cached data for instant load ──
+  const hasCached = cacheGet('cache_customers') && cacheGet('cache_prices') && cacheGet('cache_sizes');
 
+  async function loadAndApply(fromCache) {
+    const [custRows, priceRows, sizeRows] = await Promise.all([
+      fromCache ? fetchExcelCached(URL_CUSTOMERS, 'cache_customers') : fetchExcel(URL_CUSTOMERS),
+      fromCache ? fetchExcelCached(URL_PRICES,    'cache_prices')    : fetchExcel(URL_PRICES),
+      fromCache ? fetchExcelCached(URL_SIZES,      'cache_sizes')     : fetchExcel(URL_SIZES),
+    ]);
+    if (!fromCache) {
+      cacheSet('cache_customers', custRows);
+      cacheSet('cache_prices',    priceRows);
+      cacheSet('cache_sizes',     sizeRows);
+    }
     parseCustomers(custRows);
     parsePricelist(priceRows);
     parseStockSize(sizeRows);
+    return { custRows, priceRows, sizeRows };
+  }
 
-    document.getElementById('app-loading').style.display = 'none';
-    document.getElementById('app-main').style.display    = '';
+  try {
+    if (hasCached) {
+      // ── FAST PATH: instant render from cache ──
+      await loadAndApply(true);
+      document.getElementById('app-loading').style.display = 'none';
+      document.getElementById('app-main').style.display    = '';
+      initCustomerAutocomplete();
+      initControls();
+      document.getElementById('table-container').innerHTML =
+        '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
+      updateBadges(0);
+      showCacheBadge(true); // show "cache" indicator, refresh in bg
 
+      // ── Background refresh ──
+      loadAndApply(false).then(() => {
+        showCacheBadge(false);
+        // Re-render if a customer is already selected
+        if (state.activeArsor) {
+          buildVisibleRows(state.activeArsor);
+          renderTable();
+        }
+      }).catch(() => { /* silent – stale cache still usable */ });
 
-    initCustomerAutocomplete();
-    initControls();
-
-    document.getElementById('table-container').innerHTML =
-      '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
-    updateBadges(0);
+    } else {
+      // ── SLOW PATH: fresh fetch ──
+      await loadAndApply(false);
+      document.getElementById('app-loading').style.display = 'none';
+      document.getElementById('app-main').style.display    = '';
+      initCustomerAutocomplete();
+      initControls();
+      document.getElementById('table-container').innerHTML =
+        '<div class="empty">Válassz vevőt a lista megjelenítéséhez.</div>';
+      updateBadges(0);
+    }
   } catch(e) {
     document.getElementById('app-loading').style.display = 'none';
     const err = document.getElementById('app-error');
