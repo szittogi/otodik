@@ -51,6 +51,13 @@
     html { height: 100%; }
     body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
+    header.webshop-mode {
+      background: color-mix(in srgb, var(--surface) 88%, #00b87a 12%) !important;
+      border-bottom-color: rgba(0,180,100,.25) !important;
+    }
+    :root.light header.webshop-mode {
+      background: color-mix(in srgb, var(--surface) 82%, #00b87a 18%) !important;
+    }
     header {
       flex-shrink: 0;
       border-bottom: 1px solid var(--border);
@@ -204,7 +211,14 @@
     .empty { text-align: center; padding: 48px; color: var(--text-muted); font-size: 14px; }
 
     @media (max-width: 700px) {
-      header { padding: 10px 16px; }
+      header.webshop-mode {
+      background: color-mix(in srgb, var(--surface) 88%, #00b87a 12%) !important;
+      border-bottom-color: rgba(0,180,100,.25) !important;
+    }
+    :root.light header.webshop-mode {
+      background: color-mix(in srgb, var(--surface) 82%, #00b87a 18%) !important;
+    }
+    header { padding: 10px 16px; }
       #badge-row { padding: 4px 16px 0; }
       .container { padding: 16px; }
     }
@@ -958,6 +972,13 @@ function initCustomerAutocomplete() {
   };
 }
 
+function updateHeaderTint(arsor) {
+  const hdr = document.getElementById('main-header');
+  if (!hdr) return;
+  if (arsor === 'arsor11_webshop') hdr.classList.add('webshop-mode');
+  else hdr.classList.remove('webshop-mode');
+}
+
 function selectCustomer(c) {
   state.selectedCustomer = c;
   state.activeUpsellSKUs = null;
@@ -983,6 +1004,7 @@ function selectCustomer(c) {
   }
 
   buildVisibleRows(arsor);
+  updateHeaderTint(arsor);
   renderTable();
 }
 
