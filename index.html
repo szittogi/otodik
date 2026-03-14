@@ -804,6 +804,8 @@ function makeUpsellSubRows(parentSKU, upsellList, skuLookup) {
   return frags;
 }
 
+let _renderToken = 0; // cancel stale renders
+
 function renderTable() {
   const container = document.getElementById('table-container');
   let rows = state.visibleRows;
@@ -822,48 +824,57 @@ function renderTable() {
 
   updateBadges(rows.length);
 
-
   if (!rows.length) {
     container.innerHTML = '<div class="empty">Nincs találat.</div>';
     return;
   }
 
   const skuLookup = buildSkuLookup(state.visibleRows);
+  const token = ++_renderToken;
+  const CHUNK = 60; // sorok száma darabonként
 
-  const tbody = document.createElement('tbody');
-  for (const r of rows) {
-    tbody.appendChild(makeMainRow(r, skuLookup));
-    // If this row's upsell is expanded, insert sub-rows immediately after
-    if (expandedUpsells.has(r.sku) && r.upsellList.length) {
-      makeUpsellSubRows(r.sku, r.upsellList, skuLookup).forEach(tr => tbody.appendChild(tr));
-    }
-  }
-
+  // Build table shell immediately
   const table = document.createElement('table');
   table.innerHTML = `<thead><tr>
     <th>Cikkszám</th><th>Név</th><th style="text-align:right">Ár</th><th id="th-webshop" style="text-align:right">Webshop ár</th><th>Méret</th><th>Készlet</th><th>Upsell</th>
   </tr></thead>`;
+  const tbody = document.createElement('tbody');
   table.appendChild(tbody);
 
   const wrap = document.createElement('div');
   wrap.className = 'table-wrap';
   wrap.appendChild(table);
-
   container.innerHTML = '';
   container.appendChild(wrap);
 
-  // Click: toggle upsell expand on chip click
+  // Click handler
   wrap.addEventListener('click', e => {
     const chip = e.target.closest('.upsell-chip');
     if (!chip) return;
     const parentSKU = chip.dataset.parent;
-    if (expandedUpsells.has(parentSKU)) {
-      expandedUpsells.delete(parentSKU);
-    } else {
-      expandedUpsells.add(parentSKU);
-    }
+    if (expandedUpsells.has(parentSKU)) expandedUpsells.delete(parentSKU);
+    else expandedUpsells.add(parentSKU);
     renderTable();
   });
+
+  // Chunked append
+  let idx = 0;
+  function appendChunk() {
+    if (token !== _renderToken) return; // cancelled
+    const end = Math.min(idx + CHUNK, rows.length);
+    const frag = document.createDocumentFragment();
+    for (let i = idx; i < end; i++) {
+      const r = rows[i];
+      frag.appendChild(makeMainRow(r, skuLookup));
+      if (expandedUpsells.has(r.sku) && r.upsellList.length) {
+        makeUpsellSubRows(r.sku, r.upsellList, skuLookup).forEach(tr => frag.appendChild(tr));
+      }
+    }
+    tbody.appendChild(frag);
+    idx = end;
+    if (idx < rows.length) requestAnimationFrame(appendChunk);
+  }
+  requestAnimationFrame(appendChunk);
 }
 
 /* ═══════════════════════════════════════════════
