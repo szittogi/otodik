@@ -178,7 +178,7 @@
     /* upsell expand rows */
     .upsell-chip { cursor: pointer; }
     tr.upsell-sub { background: var(--upsell-sub-bg) !important; }
-    tr.upsell-sub td { padding: 10px 16px; border-bottom: 1px solid var(--upsell-sub-border); }
+    tr.upsell-sub td { padding: 5px 16px; border-bottom: 1px solid var(--upsell-sub-border); }
     tr.upsell-sub td.sku-cell { color: var(--accent2); font-size: calc(var(--tbl-font) - 1px); padding-left: 32px; }
     tr.upsell-sub td.sku-cell.oos { color: var(--danger) !important; }
     tr.upsell-sub td.name-cell { font-size: var(--tbl-font); font-weight: 600; color: var(--text); }
@@ -187,7 +187,7 @@
     tr.upsell-sub-header td { background: var(--upsell-hdr-bg) !important; }
     tr.upsell-sub-end td { background: var(--upsell-hdr-bg) !important; }
     tr.upsell-sub-header td {
-      padding: 5px 16px 4px 32px;
+      padding: 4px 16px 3px 32px;
       font-size: 10px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;
       color: var(--accent2); background: var(--upsell-hdr-bg); border-bottom: none;
     }
@@ -718,11 +718,19 @@ function buildVisibleRows(arsor) {
       webshopBrutto: webshop.brutto,
       size         : info?.size  ?? '–',
       stock        : info?.stock ?? null,
-      upsellList   : parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean),
+      upsellList   : parseUpsellList(upStock || upPrice).map(normalizeSKU).filter(Boolean), // filled after buildUpsellIndex
     });
   }
 
   buildUpsellIndex(priceRows);
+
+  // Now replace upsellList with full component from index (minus self)
+  for (const row of state.visibleRows) {
+    const comp = state.upsellIndex[row.sku];
+    if (comp && comp.size > 1) {
+      row.upsellList = [...comp].filter(s => s !== row.sku);
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════
