@@ -229,10 +229,16 @@
       <div id="customer-dropdown"></div>
     </div>
 
-    <span class="ctrl-label">Cikkszám</span>
+    <span class="ctrl-label">Keresés</span>
     <div class="search-wrap">
       <input id="sku-search" type="text" placeholder="pl. KR124…" />
     </div>
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;font-size:11px;color:var(--text-muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.5px;">
+      <input type="checkbox" id="chk-search-sku" checked style="accent-color:var(--accent);cursor:pointer;width:13px;height:13px;"> Cikkszám
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;font-size:11px;color:var(--text-muted);font-family:'Syne',sans-serif;font-weight:700;letter-spacing:.5px;">
+      <input type="checkbox" id="chk-search-name" style="accent-color:var(--accent);cursor:pointer;width:13px;height:13px;"> Név
+    </label>
 
     <!-- upsell clear btn removed -->
     <button class="btn" id="btn-clear-sku" style="display:none">Kereső ✕</button>
@@ -770,9 +776,15 @@ function renderTable() {
   let rows = state.visibleRows;
 
   if (state.skuFilter) {
-    const q = normalizeSKU(state.skuFilter);
-    const before = rows.length;
-    rows = rows.filter(r => r.sku.includes(q));
+    const q = state.skuFilter.trim().toLowerCase();
+    const qNorm = normalizeSKU(q);
+    const bysku  = document.getElementById('chk-search-sku')?.checked;
+    const byname = document.getElementById('chk-search-name')?.checked;
+    rows = rows.filter(r => {
+      if (bysku  && r.sku.includes(qNorm)) return true;
+      if (byname && r.name.toLowerCase().includes(q)) return true;
+      return false;
+    });
   }
 
   updateBadges(rows.length);
@@ -880,6 +892,12 @@ function initCustomerAutocomplete() {
   });
   input.addEventListener('focus', () => show(state.customers.slice(0,60)));
   input.addEventListener('blur',  () => setTimeout(()=>dd.classList.remove('open'), 160));
+  input.addEventListener('focus', () => {
+    input.value = '';
+    dd.classList.remove('open');
+    show(state.customers);
+  });
+
   input.addEventListener('keydown', e => {
     const items = dd.querySelectorAll('.dd-item');
     if      (e.key==='ArrowDown') { idx=Math.min(idx+1,items.length-1); hl(items); e.preventDefault(); }
@@ -901,6 +919,7 @@ function selectCustomer(c) {
   document.getElementById('sku-search').value = '';
   expandedUpsells.clear();
   document.getElementById('btn-clear-sku').style.display = 'none';
+  setTimeout(() => document.getElementById('sku-search').focus(), 50);
 
   const arsor = getArsorGroup(c);
   state.activeArsor = arsor;
